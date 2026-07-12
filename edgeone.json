@@ -1,0 +1,8 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "agents": {
+    "framework": "claude-agent-sdk",
+    "timeout": 600
+  }
+}
