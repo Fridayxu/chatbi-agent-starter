@@ -91,25 +91,21 @@ async def handler(ctx: Any) -> Any:
         gateway_env["HOME"] = "/tmp"
         gateway_env["TMPDIR"] = "/tmp"
         gateway_env["CLAUDE_CODE_HOME"] = "/tmp"
-        model_raw = resolve_model_name(env)
-        # Claude CLI validates model names — @makers/ prefix not recognized
-        model = model_raw.replace("@makers/", "")
+        model = resolve_model_name(env)  # @makers/deepseek-v4-flash per EdgeOne docs
         logger.log(f"model={model}")
-        logger.log(f"model={model}, base_url={gateway_env.get('ANTHROPIC_BASE_URL','')}")
 
+        # Follow EdgeOne Makers skill reference pattern exactly
         edgeone_bundle = ctx.tools.to_claude_mcp_server("edgeone")
-        edgeone_mcp = create_sdk_mcp_server(name=edgeone_bundle.name, tools=edgeone_bundle.tools)
+        edgeone_mcp = create_sdk_mcp_server(edgeone_bundle)
 
-        options = ClaudeAgentOptions(
-            model=model,
-            system_prompt=CHATBI_SYSTEM_PROMPT,
-            env=gateway_env,
-            max_turns=30,
-            mcp_servers={"edgeone": edgeone_mcp},
-            allowed_tools=edgeone_bundle.allowed_tools,
-            permission_mode="dontAsk",
-            include_partial_messages=True,
-        )
+        options = {
+            "model": model,
+            "system_prompt": CHATBI_SYSTEM_PROMPT,
+            "env": gateway_env,
+            "max_turns": 30,
+            "mcp_servers": {"edgeone": edgeone_mcp},
+            "allowed_tools": edgeone_bundle.allowed_tools,
+        }
 
         # ---- SSE stream ----
         async def gen():
