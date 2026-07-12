@@ -96,7 +96,8 @@ function App() {
     ctrlRef.current = new AbortController()
     try {
       const payload = { message: text, files: currentFiles.map(f => ({ name: f.name, content: f.content, mimeType: f.mimeType || 'text/csv' })) }
-      const res = await fetch('/chat', {
+      const qs = window.location.search || ''
+      const res = await fetch('/chat' + qs, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'makers-conversation-id': convId },
         body: JSON.stringify(payload), signal: ctrlRef.current.signal
       })
