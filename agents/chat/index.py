@@ -92,11 +92,9 @@ async def handler(ctx: Any) -> Any:
         gateway_env["TMPDIR"] = "/tmp"
         gateway_env["CLAUDE_CODE_HOME"] = "/tmp"
         model_raw = resolve_model_name(env)
-        # Claude CLI doesn't recognize @makers/ prefix — strip for SDK
+        # Claude CLI validates model names — @makers/ prefix not recognized
         model = model_raw.replace("@makers/", "")
-        # Pass the gateway model for routing
-        gateway_env["CLAUDE_MODEL"] = model_raw
-        logger.log(f"model={model}, gateway_model={model_raw}")
+        logger.log(f"model={model}")
         logger.log(f"model={model}, base_url={gateway_env.get('ANTHROPIC_BASE_URL','')}")
 
         edgeone_bundle = ctx.tools.to_claude_mcp_server("edgeone")
