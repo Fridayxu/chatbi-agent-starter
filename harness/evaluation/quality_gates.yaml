@@ -1,0 +1,83 @@
+# ChatBI 质量门定义
+# 每个阶段完成后检查，不通过则标记为需修正
+#
+# 结构：
+#   platform/  — ChatBI 平台通用质量门（所有案例均需通过）
+#   case/      — 案例专用质量门（随业务案例变化，当前=库存分析）
+
+platform:
+
+  # ═══ 阶段1: 意图解析与数据准备 ═══
+  phase_data_prep:
+    - name: intent_parsed
+      description: NL输入已被intent_parser解析为结构化意图
+      check: manual
+      threshold: 结构化意图包含 analysis_type / metrics / dimensions / output_type
+    - name: data_integrity
+      description: 提取的数据通过完整性校验
+      check: harness/scripts/check_data_integrity.py
+      threshold: exit(0)
+    - name: caliber_registered
+      description: 所有指标的计算口径已在data_spec.md中注册
+      check: manual
+      threshold: 100%指标有口径来源
+
+  # ═══ 阶段2: 分析方法执行 ═══
+  phase_analysis:
+    - name: method_fit
+      description: 选用的分析方法适合当前数据的规模和分布特征
+      check: manual (reviewer)
+      threshold: 方法选择有依据（样本量/分布/时间跨度）
+    - name: no_data_leakage
+      description: 未来数据未泄露到训练集中
+      check: manual (reviewer)
+      threshold: 训练集时间 < 测试集时间，严格成立
+    - name: assumption_documented
+      description: 数据集缺失的关键参数（LT/成本等）已声明假设值
+      check: manual
+      threshold: 所有缺失参数在data_spec.md或分析报告中声明
+
+  # ═══ 阶段3: 看板与报告生成 ═══
+  phase_output:
+    - name: cross_consistency
+      description: 跨阶段/跨Agent的结果一致性
+      check: harness/scripts/check_result_consistency.py
+      threshold: exit(0)，无口径冲突
+    - name: dashboard_complete
+      description: Dashboard包含所有关键KPI，且数据绑定正确
+      check: manual
+      threshold: KPI覆盖上一阶段分析的全部结论
+    - name: report_complete
+      description: 报告结构完整（封面/摘要/主体/附录），数字格式统一
+      check: manual
+      threshold: 所有图表有标题和来源标注，无模糊定性词
+
+case:
+  # 🟠 案例专用质量门 — 当前案例：库存分析
+  # 切换案例时，请根据新业务需求替换本 section
+
+  # ═══ 库存案例专用质量门 ═══
+  inventory_case:
+    - name: forecast_better_than_baseline
+      description: 预测模型WMAPE优于内置Demand Forecast
+      check: harness/scripts/check_forecast_quality.py
+      threshold: WMAPE < 内置基线WMAPE 且 Bias在±5%以内
+    - name: model_comparison
+      description: 至少对比3种模型的性能
+      threshold: 对比模型数 ≥ 3
+    - name: abc_xyz_valid
+      description: ABC按收入贡献排名，XYZ按CV分级，3×3矩阵完整
+      threshold: A+B+C = 100%, X+Y+Z = 100%
+    - name: service_level_target
+      description: 推荐库存策略满足品类服务水平目标
+      check: harness/scripts/check_inventory_policy.py
+      threshold: A类SL≥97%, 全部SL≥92%, C类库存周数<26
+    - name: elasticity_significant
+      description: 价格弹性系数p-value < 0.05
+      threshold: 每个品类弹性模型的p-value < 0.05
+    - name: promo_roi_positive
+      description: 推荐的促销策略ROI > 1
+      threshold: ROI = 增量收入/促销成本 > 1
+    - name: pricing_revenue_positive
+      description: 推荐定价预计带来正向收入增长
+      threshold: Revenue Uplift > 0

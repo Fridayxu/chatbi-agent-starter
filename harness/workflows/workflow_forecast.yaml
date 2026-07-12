@@ -1,0 +1,46 @@
+# 需求预测工作流
+# 🟠 案例专用 — 当前案例：库存分析
+# 切换案例时，请根据新业务需求修订或替换此文件
+name: demand-forecasting
+description: 基线评估 → 多模型训练 → 对比选优 → 预测生成的完整流程
+
+stages:
+  - stage: task_readiness
+    agent: reviewer
+    description: 扫描项目结构，检查建议项是否到位
+    script: harness/scripts/check_task_readiness.py
+    required: false
+    on_fail: warn
+
+  - stage: feature_engineering
+    agent: data_engineer
+    description: 构建时序特征（滞后/滚动统计/日历/事件特征）
+    input: data/processed/cleaned_data.csv
+    output: data/processed/forecast_features.csv
+
+  - stage: baseline
+    agent: forecaster
+    description: 计算内置 Demand Forecast 的准确度作为基线
+    input: data/processed/forecast_features.csv
+    output: 基线 WMAPE/Bias/Tracking Signal
+
+  - stage: train_models
+    agent: forecaster
+    description: 训练 ARIMA + XGBoost + LSTM 等多种模型
+    input: data/processed/forecast_features.csv
+    output: results/models/ 中各模型文件
+
+  - stage: evaluate
+    agent: forecaster
+    description: 多指标评估与模型对比，选择最优模型
+    script: harness/scripts/check_forecast_quality.py
+    output: 模型对比报告 + 残差诊断
+
+  - stage: generate_forecast
+    agent: forecaster
+    description: 使用最优模型生成未来 7/14/30 天预测
+    output: results/tables/forecast_results.csv
+
+  - stage: review
+    agent: reviewer
+    description: 审查预测方法（data leakage/过拟合/Bias）、模型选择理由、预测合理性

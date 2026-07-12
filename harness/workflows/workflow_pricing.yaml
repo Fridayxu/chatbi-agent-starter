@@ -1,0 +1,41 @@
+# 定价分析工作流
+# 🟠 案例专用 — 当前案例：库存分析
+# 切换案例时，请根据新业务需求修订或替换此文件
+name: pricing-analysis
+description: 弹性建模 → 促销ROI → 竞争分析 → 定价推荐的完整流程
+
+stages:
+  - stage: task_readiness
+    agent: reviewer
+    description: 扫描项目结构，检查建议项是否到位
+    script: harness/scripts/check_task_readiness.py
+    required: false
+    on_fail: warn
+
+  - stage: elasticity
+    agent: pricing_analyst
+    description: 按品类/产品估计价格弹性（自有弹性 β + 交叉弹性 γ）
+    input: data/processed/cleaned_data.csv
+    output: results/tables/price_elasticity.csv + 弹性曲线图
+
+  - stage: promo_roi
+    agent: pricing_analyst
+    description: 促销提升效果评估 + 按 Discount 级别的 ROI 计算
+    input: data/processed/cleaned_data.csv（Holiday/Promotion + Discount + Units Sold）
+    output: 促销提升因子表 + ROI 报告
+
+  - stage: competitor
+    agent: pricing_analyst
+    description: 竞争定价差距分析 + 竞争定位图
+    input: data/processed/cleaned_data.csv（Price + Competitor Pricing）
+    output: 价格差距分析 + 竞争定位图
+
+  - stage: optimize
+    agent: pricing_analyst
+    description: 基于弹性模型的最优定价模拟与推荐
+    input: price_elasticity.csv + promo_roi 报告 + 竞争分析
+    output: 定价推荐矩阵（各品类/产品最优价格 + 预期收入变化）
+
+  - stage: review
+    agent: reviewer
+    description: 审查弹性系数显著性、促销ROI合理性、竞争假设、定价建议风险

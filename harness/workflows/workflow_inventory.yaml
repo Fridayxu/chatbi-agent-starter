@@ -1,0 +1,45 @@
+# 库存优化工作流
+# 🟠 案例专用 — 当前案例：库存分析
+# 切换案例时，请根据新业务需求修订或替换此文件
+name: inventory-optimization
+description: ABC/XYZ分类 → 安全库存 → ROP/EOQ → 策略推荐的完整流程
+
+stages:
+  - stage: task_readiness
+    agent: reviewer
+    description: 扫描项目结构，检查建议项是否到位
+    script: harness/scripts/check_task_readiness.py
+    required: false
+    on_fail: warn
+
+  - stage: classify
+    agent: inventory_analyst
+    description: ABC（收入贡献）+ XYZ（需求CV）分类，构建 3×3 策略矩阵
+    input: data/processed/cleaned_data.csv + forecast_results.csv
+    output: results/tables/abc_xyz_classification.csv + 策略矩阵图
+
+  - stage: safety_stock
+    agent: inventory_analyst
+    description: 按策略矩阵计算各 SKU 安全库存（SS = Z × σ_d × √LT）
+    input: forecast_results.csv（σ_d）+ abc_xyz_classification.csv（SL/Z值）
+    output: SS 计算表
+
+  - stage: rop_eoq
+    agent: inventory_analyst
+    description: 计算再订货点（ROP）和经济订货量（EOQ）
+    input: SS 计算表 + 日均需求 + LT假设
+    output: ROP/EOQ 推荐表
+
+  - stage: gap_analysis
+    agent: inventory_analyst
+    description: 对比当前订货行为（Units Ordered）与推荐策略的 KPI 差异
+    output: 策略对比报告（SL/周转率/库存周数）
+
+  - stage: validate
+    agent: inventory_analyst
+    description: 库存策略合理性硬校验
+    script: harness/scripts/check_inventory_policy.py
+
+  - stage: review
+    agent: reviewer
+    description: 审查分类合理性、安全库存假设、策略风险、SL目标是否达标

@@ -1,0 +1,39 @@
+# 数据准备工作流
+# ChatBI 通用 — 适用于所有业务案例
+name: data-preparation
+description: 从用户自然语言输入到干净数据的完整流程
+
+stages:
+  - stage: task_readiness
+    agent: reviewer
+    description: 扫描项目结构，检查建议项是否到位
+    script: harness/scripts/check_task_readiness.py
+    required: false
+    on_fail: warn
+
+  - stage: parse_intent
+    agent: intent_parser
+    description: 解析用户自然语言输入，输出结构化分析意图
+    input: 用户自然语言
+    output: 结构化意图描述（指标/维度/过滤/时间/产物）
+
+  - stage: load
+    agent: data_engineer
+    description: 根据意图加载原始数据
+    input: data/raw/ + intent_parser 输出的数据需求
+    output: data/processed/loaded_data.csv
+
+  - stage: validate
+    agent: data_engineer
+    description: 数据完整性校验
+    script: harness/scripts/check_data_integrity.py
+
+  - stage: transform
+    agent: data_engineer
+    description: 数据清洗、口径映射、特征生成
+    input: data/processed/loaded_data.csv
+    output: data/processed/cleaned_data.csv + 数据质量报告
+
+  - stage: review
+    agent: reviewer
+    description: 审查数据质量、口径映射正确性、处理步骤合规性

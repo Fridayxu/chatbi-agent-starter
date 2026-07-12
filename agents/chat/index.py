@@ -482,7 +482,10 @@ async def handler(ctx: Any) -> Any:
                         assistant_text = streamed_content
                     break
 
-            # ── Persist assistant message ──
+            # ── Send [DONE] FIRST so frontend completes immediately ──
+            yield b"data: [DONE]\n\n"
+
+            # ── Persist assistant message (after [DONE], doesn't block UI) ──
             if cid and assistant_text.strip():
                 try:
                     await ctx.store.append_message(cid, "assistant", assistant_text.strip())
@@ -491,7 +494,6 @@ async def handler(ctx: Any) -> Any:
 
             total_ms = (time.time() - t_start) * 1000
             logger.log(f"handler done: {len(assistant_text)} chars, {total_ms:.0f}ms total")
-            yield b"data: [DONE]\n\n"
 
         return ctx.utils.stream_sse(gen())
 

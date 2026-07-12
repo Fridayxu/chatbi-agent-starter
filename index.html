@@ -200,7 +200,10 @@ const TOOL_META = {
 const QS = window.location.search || ''
 
 async function apiListConversations() {
-  const r = await fetch('/conversations' + QS)
+  const r = await fetch('/conversations' + QS, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ limit:30 })
+  })
   const d = await r.json()
   return d.conversations || []
 }
@@ -301,12 +304,12 @@ function Sidebar({ convId, conversations, onSelect, onNew, onDelete, mobileOpen,
       conversations.length===0
         ? h('div',{className:'sidebar-empty'},'No conversations yet.\nStart a new chat!')
         : conversations.map(c=>h('div',{
-            key:c.id,className:'conv-item'+(c.id===convId?' active':''),
-            onClick:()=>{onSelect(c.id);onClose()}
+            key:c.id||c.conversation_id,className:'conv-item'+((c.id||c.conversation_id)===convId?' active':''),
+            onClick:()=>{onSelect(c.id||c.conversation_id);onClose()}
           },
-            h('span',{className:'conv-text'},c.title||c.id.slice(0,8)+'...'),
-            h('span',{className:'conv-time'},fmtTime(c.updated_at||c.created_at)),
-            h('button',{className:'conv-delete',onClick:e=>{e.stopPropagation();onDelete(c.id)},title:'Delete'},'×')
+            h('span',{className:'conv-text'},c.title||(c.metadata&&c.metadata.title)||(c.id||c.conversation_id||'').slice(0,8)+'...'),
+            h('span',{className:'conv-time'},fmtTime(c.updated_at||c.updatedAt||c.created_at||c.createdAt)),
+            h('button',{className:'conv-delete',onClick:e=>{e.stopPropagation();onDelete(c.id||c.conversation_id)},title:'Delete'},'×')
           ))
     )
   )

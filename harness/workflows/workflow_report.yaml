@@ -1,0 +1,35 @@
+# 报告生成工作流（新增）
+# ChatBI 通用 — 适用于所有业务案例
+name: report-generation
+description: 分析结果汇总 → 看板构建 → 报告撰写 → 最终审查的完整流程
+
+stages:
+  - stage: task_readiness
+    agent: reviewer
+    description: 扫描项目结构，检查建议项是否到位
+    script: harness/scripts/check_task_readiness.py
+    required: false
+    on_fail: warn
+
+  - stage: collect_results
+    agent: report_writer
+    description: 收集所有案例 Agent 的输出，汇总 KPI、表格和图表
+    input: forecaster/inventory_analyst/pricing_analyst 的输出
+    output: 汇总数据模型（dashboard_data.json）
+
+  - stage: build_dashboard
+    agent: dashboard_builder
+    description: 根据汇总数据构建交互式看板
+    input: dashboard_data.json
+    output: results/dashboard/ + 看板预览截图
+
+  - stage: write_report
+    agent: report_writer
+    description: 生成格式化 PDF 报告 + Markdown 源文件
+    input: dashboard_data.json + 看板截图 + 各 Agent 结论
+    output: results/reports/analysis_report.pdf + .md
+
+  - stage: final_review
+    agent: reviewer
+    description: 最终审查 — 跨阶段一致性、KPI口径统一、报告完整性
+    script: harness/scripts/check_result_consistency.py
