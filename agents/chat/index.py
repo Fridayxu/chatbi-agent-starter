@@ -105,7 +105,7 @@ async def handler(ctx: Any) -> Any:
             "mcp_servers": {"edgeone": edgeone_mcp},
             "allowed_tools": edgeone_bundle.allowed_tools,
             "permission_mode": "dontAsk",
-            "session_store": None,  # Platform manages sessions via ctx.store
+            "session_store": ctx.store,
         }
 
         # ---- SSE stream ----
