@@ -122,10 +122,23 @@ async def handler(ctx: Any) -> Any:
                     if ctx.request.signal.is_set():
                         logger.log("aborted")
                         break
+
+                    # Handle all message types from Claude Agent SDK
+                    text = ""
                     if hasattr(msg, "text") and msg.text:
-                        assistant_text += msg.text
-                        yield ctx.utils.sse({"type": "ai_response", "content": msg.text})
-                    elif hasattr(msg, "tool_name") and msg.tool_name:
+                        text = msg.text
+                    elif hasattr(msg, "content") and msg.content:
+                        # AssistantMessage has content blocks
+                        blocks = msg.content if isinstance(msg.content, list) else [msg.content]
+                        for b in blocks:
+                            if hasattr(b, "text") and b.text:
+                                text += b.text
+
+                    if text:
+                        assistant_text += text
+                        yield ctx.utils.sse({"type": "ai_response", "content": text})
+
+                    if hasattr(msg, "tool_name") and msg.tool_name:
                         logger.log(f"tool: {msg.tool_name}")
                         yield ctx.utils.sse({"type": "tool_call", "name": msg.tool_name})
             except Exception as e:
