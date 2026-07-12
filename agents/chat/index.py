@@ -122,30 +122,33 @@ def _store_uploaded_files(files: list[dict]) -> None:
 
 
 def _exec_python(code: str) -> str:
-    """Execute Python code in a subprocess with a timeout. Safe and isolated."""
-    # Replace !pip install patterns with actual pip install calls
+    """Execute Python code in a subprocess with a timeout."""
     lines = code.split("\n")
     pre_install = []
     actual_code = []
     for line in lines:
-        if line.strip().startswith("!pip install"):
-            pkg = line.strip()[len("!pip install"):].strip()
-            pre_install.append(pkg)
-        elif line.strip().startswith("!pip3 install"):
-            pkg = line.strip()[len("!pip3 install"):].strip()
-            pre_install.append(pkg)
+        stripped = line.strip()
+        if stripped.startswith("!pip install"):
+            pkg_str = stripped[len("!pip install"):].strip()
+            pre_install.append(pkg_str)
+        elif stripped.startswith("!pip3 install"):
+            pkg_str = stripped[len("!pip3 install"):].strip()
+            pre_install.append(pkg_str)
         else:
             actual_code.append(line)
 
-    script_parts = []
-    script_parts.append("import sys, os, warnings")
+    script_parts = ["import sys, os, warnings, subprocess as _sp"]
     script_parts.append("warnings.filterwarnings('ignore')")
     script_parts.append("os.environ['MPLBACKEND'] = 'Agg'")
 
-    # Pre-install packages
-    for pkg in pre_install:
-        script_parts.append(f"import subprocess as _sp")
-        script_parts.append(f"_sp.run([sys.executable, '-m', 'pip', 'install', '-q', '{pkg}'], check=False)")
+    # Pre-install each set of packages
+    for pkg_str in pre_install:
+        # Split by space, filter out flags (start with -) to keep them as flags
+        parts = pkg_str.split()
+        pkgs = [p for p in parts if not p.startswith('-')]
+        flags = [p for p in parts if p.startswith('-')]
+        for pkg in pkgs:
+            script_parts.append(f"_sp.run([sys.executable, '-m', 'pip', 'install', '-q'] + {flags} + ['{pkg}'], check=False)")
 
     # Actual code
     script_parts.append("\n".join(actual_code))
@@ -176,7 +179,7 @@ def _exec_python(code: str) -> str:
 
 
 def _read_file_preview(filename: str) -> str:
-    """Read an uploaded file and return a pandas preview."""
+    """Read an uploaded file and return a preview (pandas preferred, csv fallback)."""
     if filename not in _uploaded_files:
         available = ", ".join(_uploaded_files.keys()) or "(none)"
         return f"File '{filename}' not found. Available files: {available}"
@@ -184,33 +187,52 @@ def _read_file_preview(filename: str) -> str:
     f = _uploaded_files[filename]
     raw = f["bytes"]
     mime = f["mimeType"]
-
-    # Write to temp file for pandas to read
     tmp_path = Path("/tmp") / filename
     tmp_path.write_bytes(raw)
 
     try:
+        # Try pandas first
         code = f'''
-import pandas as pd, io
+import sys
 path = "{tmp_path.as_posix()}"
 mime = "{mime}"
-if mime.endswith("csv") or path.endswith(".csv") or path.endswith(".txt"):
-    df = pd.read_csv(path, nrows=1000)
-elif mime.endswith("excel") or path.endswith(".xlsx") or path.endswith(".xls"):
-    df = pd.read_excel(path, nrows=1000)
-elif path.endswith(".json"):
-    df = pd.read_json(path, nrows=1000)
-else:
-    df = pd.read_csv(path, nrows=1000)
-
-print(f"Shape: {{df.shape[0]}} rows × {{df.shape[1]}} columns")
-print(f"Columns: {{list(df.columns)}}")
-print(f"\\nDtypes:\\n{{df.dtypes.to_string()}}")
-print(f"\\nFirst 20 rows:\\n{{df.head(20).to_string()}}")
-if df.isnull().sum().sum() > 0:
-    print(f"\\nMissing values:\\n{{df.isnull().sum().to_string()}}")
-if df.describe().iloc[0].notna().any():
-    print(f"\\nSummary stats:\\n{{df.describe().to_string()}}")
+try:
+    import pandas as pd
+    import io
+    if mime.endswith("csv") or path.endswith(".csv") or path.endswith(".txt"):
+        df = pd.read_csv(path, nrows=1000)
+    elif mime.endswith("excel") or path.endswith(".xlsx") or path.endswith(".xls"):
+        df = pd.read_excel(path, nrows=1000)
+    elif path.endswith(".json"):
+        df = pd.read_json(path, nrows=1000)
+    else:
+        df = pd.read_csv(path, nrows=1000)
+    print(f"Shape: {{df.shape[0]}} rows x {{df.shape[1]}} columns")
+    print(f"Columns: {{list(df.columns)}}")
+    print(f"Dtypes:\\n{{df.dtypes.to_string()}}")
+    print(f"First 20 rows:\\n{{df.head(20).to_string()}}")
+    nulls = df.isnull().sum()
+    if nulls.sum() > 0:
+        print(f"Missing values:\\n{{nulls.to_string()}}")
+    if df.describe().iloc[0].notna().any():
+        print(f"Summary stats:\\n{{df.describe().to_string()}}")
+except ImportError:
+    # Fallback: use built-in csv module
+    import csv
+    with open(path, 'r', newline='', encoding='utf-8-sig') as cf:
+        reader = csv.reader(cf)
+        rows = list(reader)
+    if not rows:
+        print("(empty file)")
+    else:
+        header = rows[0]
+        data = rows[1:]
+        print(f"Shape: {{len(data)}} rows x {{len(header)}} columns")
+        print(f"Columns: {{header}}")
+        print(f"First 20 rows:")
+        for i, row in enumerate(data[:20]):
+            print(row)
+        print(f"\\nNote: pandas not installed. Install with: pip install pandas")
 '''
         result = subprocess.run(
             ["python", "-c", code],
@@ -221,7 +243,7 @@ if df.describe().iloc[0].notna().any():
         )
         return result.stdout.strip() or f"(empty file or read error: {result.stderr})"
     except Exception as e:
-        return f"❌ Read error: {e}"
+        return f"Read error: {e}"
 
 
 def _list_files_str() -> str:
