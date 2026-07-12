@@ -97,16 +97,16 @@ async def handler(ctx: Any) -> Any:
         edgeone_bundle = ctx.tools.to_claude_mcp_server("edgeone")
         edgeone_mcp = create_sdk_mcp_server(name=edgeone_bundle.name, tools=edgeone_bundle.tools)
 
-        options = {
-            "model": model,
-            "system_prompt": CHATBI_SYSTEM_PROMPT,
-            "env": gateway_env,
-            "max_turns": 30,
-            "mcp_servers": {"edgeone": edgeone_mcp},
-            "allowed_tools": edgeone_bundle.allowed_tools,
-            "permission_mode": "dontAsk",
-            "session_store": ctx.store,
-        }
+        options = ClaudeAgentOptions(
+            model=model,
+            system_prompt=CHATBI_SYSTEM_PROMPT,
+            env=gateway_env,
+            max_turns=30,
+            mcp_servers={"edgeone": edgeone_mcp},
+            allowed_tools=edgeone_bundle.allowed_tools,
+            permission_mode="dontAsk",
+            session_store=ctx.store,
+        )
 
         # ---- SSE stream ----
         async def gen():
