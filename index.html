@@ -418,10 +418,10 @@ function App() {
       const payload={message:text,files:cf.map(f=>({name:f.name,content:f.content,mimeType:f.mimeType||'text/csv'}))}
       const res=await fetch('/chat'+QS,{method:'POST',headers:{'Content-Type':'application/json','makers-conversation-id':convId},body:JSON.stringify(payload),signal:ctrlRef.current.signal})
       const reader=res.body.getReader(),decoder=new TextDecoder()
-      let buf='',text2='',flushTimer=null
+      let buf='',text2='',flushTimer=null,streamDone=false
       const flush=()=>{flushTimer=null;updateLast(text2)}
 
-      while(true){
+      while(!streamDone){
         const{done,value}=await reader.read()
         if(done)break
         buf+=decoder.decode(value,{stream:true})
@@ -432,7 +432,8 @@ function App() {
             const d=line.slice(6)
             if(d==='[DONE]'){
               if(flushTimer){clearTimeout(flushTimer);flushTimer=null}
-              updateLast(text2);finishLast();setSaved(true);setStatusText('');loadConversations();break
+              updateLast(text2);finishLast();setSaved(true);setStatusText('');loadConversations()
+              streamDone=true;break
             }
             try{const j=JSON.parse(d)
               switch(j.type){
@@ -445,6 +446,7 @@ function App() {
               }
             }catch{}
           }
+          if(streamDone)break
         }
       }
       if(flushTimer){clearTimeout(flushTimer);flushTimer=null}
