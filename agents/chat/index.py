@@ -88,6 +88,9 @@ async def handler(ctx: Any) -> Any:
         gateway_env = collect_gateway_env(env)
         gateway_env["CLAUDE_CONFIG_DIR"] = "/tmp/claude-agent-sdk"
         gateway_env["CLAUDE_CODE_TMPDIR"] = "/tmp"
+        gateway_env["HOME"] = "/tmp"
+        gateway_env["TMPDIR"] = "/tmp"
+        gateway_env["CLAUDE_CODE_HOME"] = "/tmp"
         model = resolve_model_name(env)
         logger.log(f"model={model}, base_url={gateway_env.get('ANTHROPIC_BASE_URL','')}")
 
@@ -111,7 +114,11 @@ async def handler(ctx: Any) -> Any:
             try:
                 logger.log("starting query stream")
                 stream = query(prompt=user_message, options=options)
+                first = True
                 async for msg in stream:
+                    if first:
+                        logger.log(f"msg_type={type(msg).__name__}, attrs={[a for a in dir(msg) if not a.startswith('_')]}")
+                        first = False
                     if ctx.request.signal.is_set():
                         logger.log("aborted")
                         break
