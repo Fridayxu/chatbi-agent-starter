@@ -91,12 +91,11 @@ async def handler(ctx: Any) -> Any:
         gateway_env["HOME"] = "/tmp"
         gateway_env["TMPDIR"] = "/tmp"
         gateway_env["CLAUDE_CODE_HOME"] = "/tmp"
-        model = resolve_model_name(env)  # @makers/deepseek-v4-flash per EdgeOne docs
+        model = resolve_model_name(env).replace("@makers/", "")  # strip for CLI compat
         logger.log(f"model={model}")
 
-        # Follow EdgeOne Makers skill reference pattern exactly
         edgeone_bundle = ctx.tools.to_claude_mcp_server("edgeone")
-        edgeone_mcp = create_sdk_mcp_server(edgeone_bundle)
+        edgeone_mcp = create_sdk_mcp_server(name=edgeone_bundle.name, tools=edgeone_bundle.tools)
 
         options = {
             "model": model,
@@ -105,6 +104,7 @@ async def handler(ctx: Any) -> Any:
             "max_turns": 30,
             "mcp_servers": {"edgeone": edgeone_mcp},
             "allowed_tools": edgeone_bundle.allowed_tools,
+            "permission_mode": "dontAsk",
         }
 
         # ---- SSE stream ----
