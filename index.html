@@ -683,6 +683,7 @@ function App() {
   const [files, setFiles] = useState([])
   const [modelName, setModelName] = useState('')
   const [sessionSaved, setSessionSaved] = useState(false)
+  const [statusText, setStatusText] = useState('')  // thinking / executing / aborted
   const [convId] = useState(() => localStorage.getItem(STORAGE_KEY) || crypto.randomUUID())
   const msgsRef = useRef(null)
   const textareaRef = useRef(null)
@@ -784,6 +785,7 @@ function App() {
             if (d === '[DONE]') {
               finishLast()
               setSessionSaved(true)
+              setStatusText('')
               break
             }
             try {
@@ -791,6 +793,9 @@ function App() {
               switch (j.type) {
                 case 'model_info':
                   setModelName(j.model || '')
+                  break
+                case 'status':
+                  setStatusText(j.status === 'thinking' ? 'Thinking...' : j.status === 'executing' ? 'Executing...' : '')
                   break
                 case 'tool_call':
                   addToolCall(j.id || j.name + '_' + Date.now(), {
@@ -826,6 +831,7 @@ function App() {
                 case 'error_message':
                   updateLast(text2 + '\n\n⚠️ ' + j.content)
                   finishLast()
+                  setStatusText('')
                   break
               }
             } catch {}
@@ -839,7 +845,7 @@ function App() {
     setLoading(false); ctrlRef.current = null
   }
 
-  const handleStop = () => { ctrlRef.current?.abort(); setLoading(false); finishLast() }
+  const handleStop = () => { ctrlRef.current?.abort(); setLoading(false); finishLast(); setStatusText('') }
   const handleChipClick = (label) => { setInput(label); setTimeout(() => textareaRef.current?.focus(), 50) }
 
   const handleFile = (e) => {
@@ -866,6 +872,21 @@ function App() {
           h('span', { className: 'dot' }), modelName
         ),
         h('span', { className: 'session-indicator' + (sessionSaved ? ' visible' : '') }, '💾 Saved')
+      )
+    ),
+
+    /* ── Status bar (thinking / executing) ── */
+    statusText && h('div', {
+      style: {
+        textAlign: 'center', padding: '6px 0', fontSize: '0.75rem',
+        color: 'var(--text-muted)', fontStyle: 'italic',
+        borderBottom: '1px solid var(--border)', flexShrink: 0,
+        background: 'var(--bg-raised)',
+      }
+    },
+      h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+        h('span', { className: 'running-dots' }, h('span'), h('span'), h('span')),
+        statusText
       )
     ),
 
@@ -935,16 +956,18 @@ function App() {
     files.length > 0 && h('div', { style: { padding: '0 var(--content-padding)', flexShrink: 0 } },
       h('div', { style: { maxWidth: 'var(--content-max)', margin: '0 auto', width: '100%' } },
         h('div', { className: 'file-tags' },
-          files.map((f, i) =>
-            h('span', { key: i, className: 'file-tag' },
+          files.map((f, i) => {
+            const ext = (f.name || '').split('.').pop()?.toUpperCase() || 'FILE'
+            return h('span', { key: i, className: 'file-tag' },
               h('span', { className: 'file-tag-name' }, '📄 ' + f.name),
+              h('span', { style: { fontSize: '0.6rem', background: 'var(--surface)', padding: '1px 6px', borderRadius: '3px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em' } }, ext),
               h('button', {
                 className: 'file-tag-remove',
                 onClick: () => setFiles(prev => prev.filter((_, j) => j !== i)),
                 'aria-label': 'Remove ' + f.name
               }, '×')
             )
-          )
+          })
         )
       )
     ),

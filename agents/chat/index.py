@@ -306,21 +306,30 @@ async def handler(ctx: Any) -> Any:
         async def gen():
             nonlocal messages
             assistant_text = ""
-            max_turns = 10  # prevent infinite tool loops
+            max_turns = 10
             turn = 0
 
-            # ── Emit model_info so the frontend knows the active model ──
             yield ctx.utils.sse({"type": "model_info", "model": model, "provider": "EdgeOne AI Gateway"})
 
-            async with httpx.AsyncClient(timeout=180.0) as client:
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 while turn < max_turns:
                     turn += 1
                     if ctx.request.signal.is_set():
+                        yield ctx.utils.sse({"type": "status", "status": "aborted"})
                         break
 
+                    # ── Signal to frontend: LLM is thinking ──
+                    yield ctx.utils.sse({"type": "status", "status": "thinking"})
+
                     t_api = time.time()
+
+                    # ── Stream from API — real-time text + tool call accumulation ──
+                    streamed_content = ""
+                    tool_call_accum: dict[int, dict] = {}  # index → {id, name, arguments}
+
                     try:
-                        response = await client.post(
+                        async with client.stream(
+                            "POST",
                             f"{base_url}/chat/completions",
                             headers={
                                 "Authorization": f"Bearer {api_key}",
@@ -331,42 +340,95 @@ async def handler(ctx: Any) -> Any:
                                 "messages": messages,
                                 "tools": TOOLS,
                                 "tool_choice": "auto",
-                                "stream": False,  # non-streaming for tool call handling
+                                "stream": True,
                             },
-                        )
+                        ) as stream_response:
+                            if stream_response.status_code != 200:
+                                err_body = (await stream_response.aread()).decode()[:300]
+                                logger.error(f"API {stream_response.status_code}: {err_body}")
+                                yield ctx.utils.sse({"type": "error_message", "content": f"Gateway {stream_response.status_code}"})
+                                break
+
+                            async for line in stream_response.aiter_lines():
+                                if ctx.request.signal.is_set():
+                                    break
+                                if not line.startswith("data: "):
+                                    continue
+                                data_str = line[6:]
+                                if data_str == "[DONE]":
+                                    break
+                                try:
+                                    chunk = json.loads(data_str)
+                                except json.JSONDecodeError:
+                                    continue
+
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+
+                                # ── Text content: stream immediately ──
+                                content = delta.get("content", "") or ""
+                                if content:
+                                    streamed_content += content
+                                    yield ctx.utils.sse({"type": "ai_response", "content": content})
+
+                                # ── Tool calls: accumulate by index ──
+                                for tc in delta.get("tool_calls", []):
+                                    idx = tc.get("index", 0)
+                                    if idx not in tool_call_accum:
+                                        tool_call_accum[idx] = {"id": "", "name": "", "arguments": ""}
+                                    entry = tool_call_accum[idx]
+                                    if tc.get("id"):
+                                        entry["id"] = tc["id"]
+                                    fn = tc.get("function", {})
+                                    if fn.get("name"):
+                                        entry["name"] = fn["name"]
+                                    if fn.get("arguments"):
+                                        entry["arguments"] += fn["arguments"]
+
+                    except httpx.ReadError as e:
+                        if not ctx.request.signal.is_set():
+                            logger.error(f"stream read error: {e}")
+                            yield ctx.utils.sse({"type": "error_message", "content": f"Stream error: {e}"})
+                        break
                     except Exception as e:
                         logger.error(f"API call failed: {e}")
                         yield ctx.utils.sse({"type": "error_message", "content": f"API error: {e}"})
                         break
 
-                    api_ms = (time.time() - t_api) * 1000
-                    logger.log(f"API round-trip: {api_ms:.0f}ms (turn {turn})")
-
-                    if response.status_code != 200:
-                        err_body = response.text[:300]
-                        logger.error(f"API {response.status_code}: {err_body}")
-                        yield ctx.utils.sse({"type": "error_message", "content": f"Gateway {response.status_code}: {err_body}"})
+                    if ctx.request.signal.is_set():
+                        yield ctx.utils.sse({"type": "status", "status": "aborted"})
                         break
 
-                    data = response.json()
-                    choice = data.get("choices", [{}])[0]
-                    msg = choice.get("message", {})
+                    api_ms = (time.time() - t_api) * 1000
+                    logger.log(f"stream round-trip: {api_ms:.0f}ms (turn {turn})")
 
-                    # ── Tool calls? ──
-                    tool_calls = msg.get("tool_calls", [])
-                    if tool_calls:
-                        # Execute each tool ONCE, cache results, emit SSE events
-                        tool_results = {}  # tool_call_id → result string
-                        for tc in tool_calls:
-                            fn = tc.get("function", {})
-                            tool_name = fn.get("name", "unknown")
-                            tool_args_raw = fn.get("arguments", "{}")
+                    # ── Process accumulated tool calls ──
+                    tool_calls_list = sorted(
+                        [v for v in tool_call_accum.values() if v["name"]],
+                        key=lambda x: list(tool_call_accum.keys())[list(tool_call_accum.values()).index(x)]
+                    )
+                    # Deduplicate & preserve order
+                    seen = set()
+                    ordered_tool_calls = []
+                    for tc in tool_calls_list:
+                        key = (tc["id"], tc["name"])
+                        if key not in seen:
+                            seen.add(key)
+                            ordered_tool_calls.append(tc)
+
+                    if ordered_tool_calls:
+                        yield ctx.utils.sse({"type": "status", "status": "executing"})
+
+                        tool_results = {}
+                        for tc in ordered_tool_calls:
+                            if ctx.request.signal.is_set():
+                                break
+                            tool_name = tc["name"]
+                            tc_id = tc["id"]
                             try:
-                                tool_args = json.loads(tool_args_raw) if isinstance(tool_args_raw, str) else tool_args_raw
+                                tool_args = json.loads(tc["arguments"]) if tc["arguments"] else {}
                             except json.JSONDecodeError:
-                                tool_args = {"raw": tool_args_raw}
+                                tool_args = {"raw": tc["arguments"]}
 
-                            tc_id = tc.get("id", "")
                             yield ctx.utils.sse({
                                 "type": "tool_call",
                                 "id": tc_id,
@@ -385,37 +447,28 @@ async def handler(ctx: Any) -> Any:
                                 "length": len(result),
                             })
 
-                        # Append to message history (reuse cached results)
-                        messages.append({
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": tool_calls,
-                        })
-                        for tc in tool_calls:
-                            tc_id = tc.get("id", "")
+                        if ctx.request.signal.is_set():
+                            yield ctx.utils.sse({"type": "status", "status": "aborted"})
+                            break
+
+                        # Append to message history for next turn
+                        openai_tool_calls = [
+                            {"id": tc["id"], "type": "function",
+                             "function": {"name": tc["name"], "arguments": tc["arguments"]}}
+                            for tc in ordered_tool_calls
+                        ]
+                        messages.append({"role": "assistant", "content": None, "tool_calls": openai_tool_calls})
+                        for tc in ordered_tool_calls:
                             messages.append({
                                 "role": "tool",
-                                "tool_call_id": tc_id,
-                                "content": tool_results.get(tc_id, "(no result)"),
+                                "tool_call_id": tc["id"],
+                                "content": tool_results.get(tc["id"], "(no result)"),
                             })
-                        continue  # next turn → model processes tool results
+                        continue  # next turn
 
-                    # ── Text response ──
-                    content = msg.get("content", "")
-                    if content:
-                        assistant_text = content
-                        # Stream token-by-token by simulating chunking
-                        # (DeepSeek non-streaming returns full text; we chunk for smooth UX)
-                        chunk_size = 8
-                        for i in range(0, len(content), chunk_size):
-                            if ctx.request.signal.is_set():
-                                break
-                            chunk = content[i:i + chunk_size]
-                            yield ctx.utils.sse({"type": "ai_response", "content": chunk})
-                            await _sleep_tiny()
-                        break
-
-                    # Empty response — end
+                    # ── Text response complete ──
+                    if streamed_content:
+                        assistant_text = streamed_content
                     break
 
             # ── Persist assistant message ──
@@ -439,6 +492,3 @@ async def handler(ctx: Any) -> Any:
         return ctx.utils.stream_sse(err_gen())
 
 
-async def _sleep_tiny():
-    """Tiny async sleep for chunked streaming — avoids flooding the SSE buffer."""
-    await asyncio.sleep(0.01)
