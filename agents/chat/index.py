@@ -91,8 +91,8 @@ async def handler(ctx: Any) -> Any:
         gateway_env["HOME"] = "/tmp"
         gateway_env["TMPDIR"] = "/tmp"
         gateway_env["CLAUDE_CODE_HOME"] = "/tmp"
-        model = resolve_model_name(env)
-        logger.log(f"model={model}")
+        model = resolve_model_name(env).replace("@makers/", "")
+        logger.log(f"model={model}, base_url={gateway_env.get('ANTHROPIC_BASE_URL','')}")
 
         edgeone_bundle = ctx.tools.to_claude_mcp_server("edgeone")
         edgeone_mcp = create_sdk_mcp_server(name=edgeone_bundle.name, tools=edgeone_bundle.tools)
