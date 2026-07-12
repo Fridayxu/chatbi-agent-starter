@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from claude_agent_sdk import query, create_sdk_mcp_server
+from claude_agent_sdk import query, create_sdk_mcp_server, ClaudeAgentOptions
 
 from .._model import resolve_model_name, collect_gateway_env
 from .._logger import create_logger
@@ -94,16 +94,16 @@ async def handler(ctx: Any) -> Any:
         edgeone_bundle = ctx.tools.to_claude_mcp_server("edgeone")
         edgeone_mcp = create_sdk_mcp_server(name=edgeone_bundle.name, tools=edgeone_bundle.tools)
 
-        options = {
-            "model": model,
-            "system_prompt": CHATBI_SYSTEM_PROMPT,
-            "env": gateway_env,
-            "max_turns": 30,
-            "mcp_servers": {"edgeone": edgeone_mcp},
-            "allowed_tools": edgeone_bundle.allowed_tools,
-            "permission_mode": "dontAsk",
-            "include_partial_messages": True,
-        }
+        options = ClaudeAgentOptions(
+            model=model,
+            system_prompt=CHATBI_SYSTEM_PROMPT,
+            env=gateway_env,
+            max_turns=30,
+            mcp_servers={"edgeone": edgeone_mcp},
+            allowed_tools=edgeone_bundle.allowed_tools,
+            permission_mode="dontAsk",
+            include_partial_messages=True,
+        )
 
         # ---- SSE stream ----
         async def gen():
