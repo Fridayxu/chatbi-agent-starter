@@ -69,6 +69,7 @@
     .turn-user{align-items:flex-end}.turn-assistant{align-items:flex-start}
     .turn-label{font-size:.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:4px;user-select:none}
     .msg-user{max-width:85%;background:var(--accent-dim);border:1px solid rgba(94,168,217,.12);border-radius:var(--radius-lg);padding:10px 15px;font-size:var(--fs-base);word-wrap:break-word;overflow-wrap:break-word}
+.msg-file{max-width:85%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 15px;font-size:var(--fs-base);display:flex;align-items:center;gap:10px;word-wrap:break-word}
     .msg-assistant{width:100%;font-size:var(--fs-base);word-wrap:break-word;overflow-wrap:break-word}
     .msg-assistant p{margin:0 0 .6em}.msg-assistant p:last-child{margin-bottom:0}
     .msg-assistant h1,.msg-assistant h2,.msg-assistant h3{font-weight:600;margin:1.2em 0 .4em;letter-spacing:-.01em}
@@ -406,9 +407,15 @@ function App() {
     setInput('')
     const cf=[...files];setFiles([])
 
-    let display=text
-    if(cf.length){const names=cf.map(f=>'📄 '+f.name).join(', ');display=text?names+'\n'+text:names}
-    addMsg('user',display)
+    // Show files as separate cards first
+    if(cf.length){
+      cf.forEach(f=>{
+        const ext=(f.name||'').split('.').pop()?.toUpperCase()||'FILE'
+        addMsg('user','📄 **'+f.name+'**  ('+ext+')',{isFile:true})
+      })
+    }
+    // Then show text message
+    if(text) addMsg('user',text)
     addMsg('assistant','')
     setLoading(true)
     setStatusText('Thinking...')
@@ -487,7 +494,7 @@ function App() {
                 return h('div',{key:m.id,className:'turn '+(m.role==='user'?'turn-user':'turn-assistant')},
                   h('div',{className:'turn-label'},m.role==='user'?'You':'ChatBI'),
                   m.role==='user'
-                    ? h('div',{className:'msg-user'},m.content)
+                    ? h('div',{className:m.isFile?'msg-file':'msg-user'},m.content)
                     : h('div',{className:'msg-assistant'},
                         h(ReactMarkdown,{remarkPlugins:[remarkGfm],components:{code({node,inline,className,children,...props}){if(inline)return h('code',{...props},children);const match=/language-(\w+)/.exec(className||'');return h(CodeBlock,{language:match?match[1]:null},String(children).replace(/\n$/,''))}}},m.content||''),
                         m.streaming&&h('span',{className:'streaming-cursor','aria-hidden':'true'})
