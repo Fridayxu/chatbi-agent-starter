@@ -179,72 +179,103 @@ def _exec_python(code: str) -> str:
 
 
 def _read_file_preview(filename: str) -> str:
-    """Read an uploaded file — returns rich preview with stats (csv built-in, no pandas needed)."""
+    """Read a file — efficient sampling for large files, full stats for small ones."""
     if filename not in _uploaded_files:
         available = ", ".join(_uploaded_files.keys()) or "(none)"
         return f"File '{filename}' not found. Available files: {available}"
 
     f = _uploaded_files[filename]
     raw = f["bytes"]
+    size_mb = len(raw) / (1024 * 1024)
     tmp_path = Path("/tmp") / filename
     tmp_path.write_bytes(raw)
 
+    # For large files, use sampling to avoid timeout
+    max_rows = 5000 if size_mb > 0.5 else 50000
+
     try:
         code = f'''
-import csv, statistics as st, sys
+import csv, statistics as st, sys, random, os
 path = "{tmp_path.as_posix()}"
+file_size = {size_mb}
+max_rows = {max_rows}
+
 with open(path, 'r', newline='', encoding='utf-8-sig') as cf:
     reader = csv.DictReader(cf)
-    data = [row for row in reader]
-if not data:
-    print("(empty file)")
-    sys.exit(0)
-cols = list(data[0].keys())
-print(f"Shape: {{len(data)}} rows x {{len(cols)}} columns")
-print(f"Columns: {{cols}}")
+    all_data = [row for row in reader]
+
+total_rows = len(all_data)
+print(f"File: {filename} ({file_size:.1f}MB)")
+print(f"Shape: {{total_rows}} rows x {{len(all_data[0].keys())}} columns")
+print(f"Columns: {{list(all_data[0].keys())}}")
+
+# For large files, sample
+if total_rows > max_rows:
+    sample = random.sample(all_data, max_rows)
+    print(f"(Sampled {{max_rows}}/{{total_rows}} rows for stats)")
+else:
+    sample = all_data
+
+cols = list(sample[0].keys())
+
 # Detect numeric columns & compute stats
 num_cols = []
 for c in cols:
     try:
-        [float(r[c]) for r in data]
+        [float(r[c]) for r in sample]
         num_cols.append(c)
     except: pass
+
 if num_cols:
     print(f"Numeric columns: {{num_cols}}")
     for c in num_cols:
-        vals = [float(r[c]) for r in data]
-        print(f"  {{c}}: min={{min(vals):.2f}} max={{max(vals):.2f}} mean={{st.mean(vals):.2f}} sum={{sum(vals):.2f}}")
-# Categorical columns
+        vals = [float(r[c]) for r in sample]
+        print(f"  {{c}}: min={{min(vals):.2f}} max={{max(vals):.2f}} mean={{st.mean(vals):.2f}} sum~{{sum(vals)*total_rows/len(sample):.0f}}")
+
+# Categorical: unique values (top 20)
 for c in cols:
     if c not in num_cols:
-        uniq = sorted(set(str(r[c]) for r in data))
-        print(f"  {{c}}: unique values ({{len(uniq)}}): {{uniq}}")
-# First 20 rows
-print(f"First 20 rows:")
-for i, r in enumerate(data[:20]):
+        uniq = list(dict.fromkeys(r[c] for r in sample))
+        print(f"  {{c}}: {{len(set(uniq))}} unique values, examples: {{uniq[:10]}}")
+
+# First 10 rows
+print(f"First 10 rows:")
+for i, r in enumerate(sample[:10]):
     print(f"  [{{i}}] {{r}}")
-# Correlations for numeric
+
+# Correlations for numeric columns
 if len(num_cols) >= 2:
-    print("Correlations:")
+    print("Top correlations:")
+    cors = []
     for c1 in num_cols:
         for c2 in num_cols:
             if c1 < c2:
-                v1 = [float(r[c1]) for r in data]
-                v2 = [float(r[c2]) for r in data]
+                v1 = [float(r[c1]) for r in sample]
+                v2 = [float(r[c2]) for r in sample]
                 m1, m2 = st.mean(v1), st.mean(v2)
-                num = sum((a-m1)*(b-m2) for a,b in zip(v1,v2))
-                den = (sum((a-m1)**2 for a in v1)*sum((b-m2)**2 for b in v2))**0.5
-                r = num/den if den else 0
-                if abs(r) > 0.5:
-                    print(f"  {{c1}} vs {{c2}}: r={{r:.3f}}")
-print("NOTE: use built-in csv module for analysis. pandas is NOT available in this sandbox.")
+                n = sum((a-m1)*(b-m2) for a,b in zip(v1,v2))
+                d = (sum((a-m1)**2 for a in v1)*sum((b-m2)**2 for b in v2))**0.5
+                r_val = n/d if d else 0
+                if abs(r_val) > 0.3:
+                    cors.append((abs(r_val), c1, c2, r_val))
+    cors.sort(reverse=True)
+    for _, c1, c2, r_val in cors[:5]:
+        print(f"  {{c1}} vs {{c2}}: r={{r_val:.3f}}")
+
+print("NOTE: pandas NOT available. Use built-in csv module for analysis.")
 '''
         result = subprocess.run(
             ["python", "-c", code],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=45,
             env={**os.environ, "PYTHONUNBUFFERED": "1"},
         )
-        return result.stdout.strip() or f"(empty file or read error: {result.stderr})"
+        out = result.stdout.strip()
+        # Truncate if too long (keep model context manageable)
+        if len(out) > 3000:
+            out = out[:3000] + f"\n...(truncated, {len(out)} chars total)"
+        return out or f"(empty file or read error: {result.stderr})"
+    except subprocess.TimeoutExpired:
+        return f"File too large ({size_mb:.1f}MB) for preview. Try asking specific questions about the data."
     except Exception as e:
         return f"Read error: {e}"
 
