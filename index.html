@@ -3,605 +3,172 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChatBI — AI Supply Chain Analyst</title>
+  <title>ChatBI - AI Supply Chain Analyst</title>
   <style>
-    /* =============================================
-       Design System — Warm Dark Theme
-       ============================================= */
-
     :root {
-      --bg:             #0f0f12;
-      --bg-raised:      #1a1a1f;
-      --surface:        #222228;
-      --surface-hover:  #2a2a30;
-      --border:         #2e2e36;
-      --border-light:   #383840;
-
-      --text:           #e8e4dd;
-      --text-secondary: #9e9a92;
-      --text-muted:     #6b6760;
-
-      --accent:         #5ea8d9;
-      --accent-dim:     rgba(94, 168, 217, 0.08);
-      --accent-glow:    rgba(94, 168, 217, 0.15);
-      --accent-strong:  #7cbce6;
-
-      --success:        #6bae8a;
-      --warning:        #d4a85c;
-      --error:          #d9706a;
-      --purple:         #9b8ec4;
-
-      --space-xs: 4px;
-      --space-sm: 8px;
-      --space-md: 16px;
-      --space-lg: 24px;
-      --space-xl: 32px;
-      --space-2xl: 48px;
-
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 16px;
-      --radius-full: 9999px;
-
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      --font-size-sm: 0.8125rem;
-      --font-size-base: 0.9375rem;
-      --font-size-lg: 1.0625rem;
-      --font-size-xl: 1.25rem;
-      --font-size-2xl: 1.5rem;
-      --line-height: 1.65;
-
-      --content-max: 48rem;
-      --content-padding: 24px;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-
-    body {
-      font-family: var(--font-sans);
-      background: var(--bg);
-      color: var(--text);
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      line-height: var(--line-height);
-      overflow: hidden;
-    }
-
-    #root { flex: 1; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-
-    .app { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-
-    /* =============================================
-       Header
-       ============================================= */
-
-    .header {
-      flex-shrink: 0;
-      padding: 12px var(--content-padding);
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .header-inner {
-      width: 100%;
-      max-width: var(--content-max);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .header-logo {
-      width: 32px; height: 32px;
-      border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, var(--accent), #4a8ec2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-
-    .header-title {
-      font-size: var(--font-size-base);
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.01em;
-    }
-
-    .header-spacer { flex: 1; }
-
-    /* Model badge — shows active AI Gateway model */
-    .model-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.6875rem;
-      color: var(--text-muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 4px 10px;
-      border-radius: var(--radius-full);
-      font-weight: 500;
-      font-family: var(--font-mono);
-      white-space: nowrap;
-    }
-    .model-badge .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--success);
-      flex-shrink: 0;
-    }
-
-    /* Session saved indicator */
-    .session-indicator {
-      font-size: 0.6875rem;
-      color: var(--success);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .session-indicator.visible { opacity: 1; }
-
-    /* =============================================
-       Messages
-       ============================================= */
-
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      scroll-behavior: smooth;
-      padding: var(--space-lg) 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .messages-inner {
-      width: 100%;
-      max-width: var(--content-max);
-      margin: 0 auto;
-      padding: 0 var(--content-padding);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-lg);
-    }
-
-    .turn {
-      display: flex;
-      flex-direction: column;
-      animation: message-in 0.25s ease-out both;
-    }
-    @keyframes message-in {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .turn-user { align-items: flex-end; }
-    .turn-assistant { align-items: flex-start; }
-
-    .turn-label {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-      user-select: none;
-    }
-
-    .msg-user {
-      max-width: 85%;
-      background: var(--accent-dim);
-      border: 1px solid rgba(94, 168, 217, 0.12);
-      border-radius: var(--radius-lg);
-      padding: 12px 16px;
-      font-size: var(--font-size-base);
-      line-height: var(--line-height);
-      color: var(--text);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .msg-assistant {
-      width: 100%;
-      font-size: var(--font-size-base);
-      line-height: var(--line-height);
-      color: var(--text);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    /* Streaming cursor */
-    .streaming-cursor {
-      display: inline-block;
-      width: 4px; height: 18px;
-      background: var(--accent);
-      border-radius: 2px;
-      margin-left: 2px;
-      vertical-align: text-bottom;
-      animation: cursor-blink 0.8s ease-in-out infinite;
-    }
-    @keyframes cursor-blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.2; }
-    }
-
-    /* =============================================
-       Tool Call Cards — EdgeOne Makers sandbox
-       ============================================= */
-
-    .tool-card {
-      margin: 6px 0;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--bg-raised);
-      overflow: hidden;
-      animation: tool-in 0.2s ease-out;
-    }
-    @keyframes tool-in {
-      from { opacity: 0; transform: translateX(-4px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    .tool-card-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.15s;
-    }
-    .tool-card-header:hover { background: var(--surface-hover); }
-
-    .tool-icon {
-      width: 28px; height: 28px;
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.85rem;
-      flex-shrink: 0;
-    }
-    .tool-icon.code  { background: rgba(94,168,217,0.15);  color: var(--accent); }
-    .tool-icon.file  { background: rgba(155,142,196,0.15); color: var(--purple); }
-    .tool-icon.list  { background: rgba(107,174,138,0.15); color: var(--success); }
-    .tool-icon.cmd   { background: rgba(212,168,92,0.15);  color: var(--warning); }
-
-    .tool-name {
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-    }
-
-    .tool-status {
-      margin-left: auto;
-      font-size: 0.6875rem;
-      font-weight: 500;
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-    }
-    .tool-status.running {
-      background: rgba(212,168,92,0.15);
-      color: var(--warning);
-      animation: pulse-text 1.2s ease-in-out infinite;
-    }
-    .tool-status.done {
-      background: rgba(107,174,138,0.12);
-      color: var(--success);
-    }
-    @keyframes pulse-text {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .tool-chevron {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      transition: transform 0.2s;
-    }
-    .tool-chevron.open { transform: rotate(90deg); }
-
-    .tool-card-body {
-      border-top: 1px solid var(--border);
-      padding: 12px 14px;
-      display: none;
-      max-height: 260px;
-      overflow-y: auto;
-    }
-    .tool-card-body.open { display: block; }
-
-    .tool-card-body pre {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin: 0;
-      background: var(--bg);
-      padding: 10px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-light);
-    }
-
-    .tool-card-body .tool-meta {
-      font-size: 0.6875rem;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-      display: flex;
-      gap: 12px;
-    }
-
-    /* Running indicator dots */
-    .running-dots { display: inline-flex; gap: 3px; margin-left: 4px; }
-    .running-dots span {
-      width: 4px; height: 4px;
-      border-radius: 50%;
-      background: var(--warning);
-      animation: dot-bounce 1.2s ease-in-out infinite;
-    }
-    .running-dots span:nth-child(2) { animation-delay: 0.15s; }
-    .running-dots span:nth-child(3) { animation-delay: 0.3s; }
-    @keyframes dot-bounce {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-
-    /* =============================================
-       Markdown Content
-       ============================================= */
-
-    .msg-assistant p { margin: 0 0 0.6em; }
-    .msg-assistant p:last-child { margin-bottom: 0; }
-
-    .msg-assistant h1, .msg-assistant h2, .msg-assistant h3, .msg-assistant h4 {
-      font-weight: 600; margin: 1.2em 0 0.4em; letter-spacing: -0.01em;
-    }
-    .msg-assistant h1 { font-size: 1.35rem; }
-    .msg-assistant h2 { font-size: 1.2rem; }
-    .msg-assistant h3 { font-size: 1.05rem; }
-    .msg-assistant h4 { font-size: 0.95rem; }
-
-    .msg-assistant ul, .msg-assistant ol { margin: 0.5em 0; padding-left: 1.5em; }
-    .msg-assistant li { margin-bottom: 0.25em; }
-    .msg-assistant strong { font-weight: 600; color: #f0ece6; }
-
-    .msg-assistant code:not(pre code) {
-      font-family: var(--font-mono); font-size: 0.85em;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 4px; padding: 1px 5px; color: #e0d8c8; white-space: nowrap;
-    }
-
-    .msg-assistant pre {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-md); margin: 0.8em 0; overflow-x: auto;
-    }
-    .msg-assistant pre code {
-      font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.55;
-      display: block; padding: 16px; color: #d4cfc4;
-      white-space: pre; overflow-x: auto;
-    }
-
-    .code-block-wrapper { position: relative; margin: 0.8em 0; }
-    .code-lang-tag {
-      position: absolute; top: 0; right: 12px;
-      font-family: var(--font-mono); font-size: 0.6875rem;
-      color: var(--text-muted); background: var(--surface);
-      border: 1px solid var(--border); border-top: none;
-      border-radius: 0 0 4px 4px; padding: 2px 10px;
-      text-transform: lowercase; user-select: none;
-    }
-
-    .msg-assistant table {
-      width: 100%; border-collapse: collapse; margin: 0.8em 0; font-size: var(--font-size-sm);
-    }
-    .msg-assistant th {
-      text-align: left; font-weight: 600; padding: 8px 12px;
-      border-bottom: 2px solid var(--border); color: var(--text-secondary);
-      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
-    }
-    .msg-assistant td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); }
-    .msg-assistant tr:last-child td { border-bottom: none; }
-    .msg-assistant tr:hover td { background: rgba(255,255,255,0.015); }
-
-    .msg-assistant blockquote {
-      border-left: 3px solid var(--accent); margin: 0.6em 0;
-      padding: 4px 0 4px 14px; color: var(--text-secondary);
-    }
-    .msg-assistant hr { border: none; border-top: 1px solid var(--border); margin: 1.2em 0; }
-    .msg-assistant a {
-      color: var(--accent-strong); text-decoration: none;
-      border-bottom: 1px solid rgba(124, 188, 230, 0.3); transition: border-color 0.15s;
-    }
-    .msg-assistant a:hover { border-bottom-color: var(--accent-strong); }
-
-    /* =============================================
-       Empty State
-       ============================================= */
-
-    .empty-state {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: var(--space-2xl) var(--content-padding); text-align: center;
-      animation: fade-in 0.5s ease-out;
-    }
-    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-
-    .empty-icon {
-      width: 56px; height: 56px; border-radius: 14px;
-      background: linear-gradient(135deg, var(--accent-dim), rgba(94,168,217,0.04));
-      border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.6rem; margin-bottom: var(--space-lg);
-    }
-    .empty-title {
-      font-size: var(--font-size-2xl); font-weight: 700;
-      margin-bottom: var(--space-sm); letter-spacing: -0.02em;
-    }
-    .empty-subtitle {
-      font-size: var(--font-size-base); color: var(--text-secondary);
-      max-width: 380px; margin-bottom: var(--space-xl); line-height: 1.5;
-    }
-
-    /* Capability chips in empty state */
-    .capability-row {
-      display: flex; flex-wrap: wrap; gap: var(--space-sm);
-      justify-content: center; margin-bottom: var(--space-xl);
-    }
-    .capability-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 0.75rem; padding: 6px 12px;
-      border-radius: var(--radius-full);
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text-secondary);
-    }
-    .capability-chip .chip-dot {
-      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-    }
-
-    /* Suggestion chips */
-    .suggestions {
-      display: flex; flex-wrap: wrap; gap: var(--space-sm);
-      justify-content: center; max-width: 520px;
-    }
-    .suggestion-chip {
-      font-size: 0.8125rem; padding: 8px 16px;
-      border-radius: var(--radius-full);
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text-secondary); cursor: pointer;
-      transition: all 0.15s ease; white-space: nowrap;
-      font-family: inherit; user-select: none;
-    }
-    .suggestion-chip:hover {
-      background: var(--surface-hover); border-color: var(--accent);
-      color: var(--text); transform: translateY(-1px);
-    }
-    .suggestion-chip:active { transform: translateY(0); }
-
-    /* =============================================
-       Composer
-       ============================================= */
-
-    .composer-area {
-      flex-shrink: 0;
-      padding: 0 var(--content-padding) 20px;
-      background: var(--bg);
-    }
-    .composer-inner {
-      width: 100%; max-width: var(--content-max); margin: 0 auto;
-    }
-
-    .file-tags {
-      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-sm);
-    }
-    .file-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 0.75rem; padding: 5px 12px 5px 10px;
-      border-radius: var(--radius-full);
-      background: var(--accent-dim); border: 1px solid rgba(94,168,217,0.15);
-      color: var(--accent-strong); user-select: none;
-      animation: fade-in 0.2s ease-out;
-    }
-    .file-tag-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .file-tag-remove {
-      background: none; border: none; color: var(--accent); cursor: pointer;
-      font-size: 0.85rem; padding: 0; line-height: 1;
-      display: flex; align-items: center; justify-content: center;
-      width: 16px; height: 16px; border-radius: 50%; transition: background 0.15s;
-    }
-    .file-tag-remove:hover { background: rgba(94,168,217,0.2); color: var(--text); }
-
-    .composer-box {
-      display: flex; align-items: flex-end; gap: var(--space-sm);
-      background: var(--bg-raised); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 8px 8px 8px 16px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    .composer-box:focus-within {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-    .composer-box textarea {
-      flex: 1; background: transparent; border: none; color: var(--text);
-      font-size: var(--font-size-base); font-family: inherit; line-height: 1.5;
-      resize: none; outline: none; padding: 4px 0; min-height: 24px; max-height: 160px;
-    }
-    .composer-box textarea::placeholder { color: var(--text-muted); }
-
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      border: none; cursor: pointer; font-family: inherit; font-weight: 500;
-      transition: all 0.15s ease; flex-shrink: 0;
-    }
-    .btn-icon {
-      width: 36px; height: 36px; border-radius: var(--radius-sm);
-      background: transparent; color: var(--text-muted); font-size: 1.1rem;
-    }
-    .btn-icon:hover { background: var(--surface-hover); color: var(--text); }
-    .btn-send {
-      width: 36px; height: 36px; border-radius: var(--radius-sm);
-      background: var(--accent); color: #fff; font-size: 1rem;
-      opacity: 0.3; pointer-events: none; transition: opacity 0.2s ease, background 0.15s ease;
-    }
-    .btn-send.active { opacity: 1; pointer-events: auto; }
-    .btn-send.active:hover { background: var(--accent-strong); }
-    .btn-stop {
-      width: 36px; height: 36px; border-radius: var(--radius-sm);
-      background: var(--error); color: #fff; font-size: 0.8rem;
-      animation: fade-in 0.2s ease-out;
-    }
-    .btn-stop:hover { background: #e8807a; }
-
-    .composer-hint {
-      text-align: center; font-size: 0.6875rem;
-      color: var(--text-muted); margin-top: 8px; user-select: none;
-    }
-
-    /* =============================================
-       Scrollbar
-       ============================================= */
-
-    .messages::-webkit-scrollbar { width: 5px; }
-    .messages::-webkit-scrollbar-track { background: transparent; }
-    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-    .messages::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
-
-    /* =============================================
-       Responsive
-       ============================================= */
-
-    @media (max-width: 600px) {
-      :root { --content-padding: 12px; }
-      .header { padding: 10px var(--content-padding); }
-      .model-badge { font-size: 0.625rem; padding: 3px 8px; }
-      .empty-icon { width: 44px; height: 44px; font-size: 1.3rem; border-radius: 12px; }
-      .empty-title { font-size: 1.2rem; }
-      .msg-user { max-width: 92%; padding: 10px 14px; }
-      .composer-box { padding: 6px 6px 6px 12px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
+      --bg: #0f0f12; --bg-raised: #1a1a1f; --surface: #222228; --surface-hover: #2a2a30;
+      --border: #2e2e36; --border-light: #383840;
+      --text: #e8e4dd; --text-secondary: #9e9a92; --text-muted: #6b6760;
+      --accent: #5ea8d9; --accent-dim: rgba(94,168,217,0.08); --accent-glow: rgba(94,168,217,0.15); --accent-strong: #7cbce6;
+      --success: #6bae8a; --warning: #d4a85c; --error: #d9706a; --purple: #9b8ec4;
+      --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-full: 9999px;
+      --font-sans: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      --font-mono: 'JetBrains Mono','SF Mono','Fira Code','Cascadia Code',monospace;
+      --fs-sm: 0.8125rem; --fs-base: 0.9375rem; --content-max: 48rem;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    body{font-family:var(--font-sans);background:var(--bg);color:var(--text);height:100dvh;overflow:hidden;line-height:1.65}
+    #root{height:100dvh}
+
+    /* App shell */
+    .app{display:flex;height:100dvh}
+
+    /* ── Sidebar ── */
+    .sidebar{width:260px;flex-shrink:0;background:var(--bg-raised);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:transform .2s}
+    .sidebar-header{padding:14px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+    .sidebar-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#4a8ec2);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+    .sidebar-title{font-size:.88rem;font-weight:700;color:var(--text);letter-spacing:-.01em}
+    .sidebar-spacer{flex:1}
+    .btn-new{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--radius-sm);background:var(--accent-dim);border:1px solid rgba(94,168,217,.15);color:var(--accent-strong);font-size:.72rem;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s;white-space:nowrap}
+    .btn-new:hover{background:rgba(94,168,217,.15);border-color:var(--accent)}
+    .conv-list{flex:1;overflow-y:auto;padding:8px}
+    .conv-item{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;display:flex;align-items:center;gap:8px;font-size:.8125rem;color:var(--text-secondary);transition:all .12s;position:relative}
+    .conv-item:hover{background:var(--surface-hover);color:var(--text)}
+    .conv-item.active{background:var(--accent-dim);color:var(--accent-strong)}
+    .conv-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .conv-time{font-size:.65rem;color:var(--text-muted);flex-shrink:0}
+    .conv-delete{opacity:0;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.75rem;padding:2px 4px;border-radius:3px;transition:all .12s}
+    .conv-item:hover .conv-delete{opacity:1}
+    .conv-delete:hover{color:var(--error);background:rgba(217,112,106,.08)}
+    .sidebar-empty{text-align:center;padding:32px 16px;color:var(--text-muted);font-size:.8125rem;line-height:1.5}
+    .sidebar-toggle{display:none;position:fixed;top:12px;left:12px;z-index:10;width:32px;height:32px;border-radius:6px;background:var(--bg-raised);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:1rem}
+
+    /* ── Main area ── */
+    .main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+    /* ── Header ── */
+    .header{flex-shrink:0;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;align-items:center;gap:10px}
+    .header-title{font-size:var(--fs-base);font-weight:600;color:var(--text)}
+    .header-spacer{flex:1}
+    .model-badge{display:inline-flex;align-items:center;gap:5px;font-size:.6875rem;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);padding:3px 9px;border-radius:var(--radius-full);font-family:var(--font-mono);white-space:nowrap}
+    .model-badge .dot{width:5px;height:5px;border-radius:50%;background:var(--success);flex-shrink:0}
+    .saved-dot{font-size:.6875rem;color:var(--success);opacity:0;transition:opacity .3s}
+    .saved-dot.show{opacity:1}
+
+    /* ── Status pill ── */
+    .status-pill{text-align:center;padding:5px 0 7px;flex-shrink:0;background:var(--bg)}
+    .status-pill>span{display:inline-flex;align-items:center;gap:7px;font-size:.75rem;font-weight:500;color:var(--accent-strong);background:var(--accent-dim);border:1px solid rgba(94,168,217,.2);padding:5px 14px;border-radius:var(--radius-full);animation:pulse-text 1.4s ease-in-out infinite}
+    @keyframes pulse-text{0%,100%{opacity:1}50%{opacity:.5}}
+
+    /* ── Messages ── */
+    .messages{flex:1;overflow-y:auto;padding:20px 0}
+    .messages-inner{width:100%;max-width:var(--content-max);margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:20px}
+    .turn{display:flex;flex-direction:column;animation:msg-in .25s ease-out both}
+    @keyframes msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .turn-user{align-items:flex-end}.turn-assistant{align-items:flex-start}
+    .turn-label{font-size:.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:4px;user-select:none}
+    .msg-user{max-width:85%;background:var(--accent-dim);border:1px solid rgba(94,168,217,.12);border-radius:var(--radius-lg);padding:10px 15px;font-size:var(--fs-base);word-wrap:break-word;overflow-wrap:break-word}
+    .msg-assistant{width:100%;font-size:var(--fs-base);word-wrap:break-word;overflow-wrap:break-word}
+    .msg-assistant p{margin:0 0 .6em}.msg-assistant p:last-child{margin-bottom:0}
+    .msg-assistant h1,.msg-assistant h2,.msg-assistant h3{font-weight:600;margin:1.2em 0 .4em;letter-spacing:-.01em}
+    .msg-assistant h1{font-size:1.35rem}.msg-assistant h2{font-size:1.2rem}.msg-assistant h3{font-size:1.05rem}
+    .msg-assistant ul,.msg-assistant ol{margin:.5em 0;padding-left:1.5em}
+    .msg-assistant li{margin-bottom:.25em}
+    .msg-assistant strong{font-weight:600;color:#f0ece6}
+    .msg-assistant code:not(pre code){font-family:var(--font-mono);font-size:.85em;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:#e0d8c8}
+    .msg-assistant pre{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);margin:.8em 0;overflow-x:auto;position:relative}
+    .msg-assistant pre code{font-family:var(--font-mono);font-size:.8125rem;line-height:1.55;display:block;padding:14px;color:#d4cfc4}
+    .code-lang{position:absolute;top:0;right:12px;font-family:var(--font-mono);font-size:.625rem;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:2px 8px;text-transform:lowercase}
+    .msg-assistant table{width:100%;border-collapse:collapse;margin:.8em 0;font-size:var(--fs-sm)}
+    .msg-assistant th{text-align:left;font-weight:600;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--text-secondary);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+    .msg-assistant td{padding:8px 12px;border-bottom:1px solid var(--border-light)}
+    .msg-assistant blockquote{border-left:3px solid var(--accent);margin:.6em 0;padding:4px 0 4px 14px;color:var(--text-secondary)}
+    .msg-assistant a{color:var(--accent-strong);text-decoration:none}
+    .streaming-cursor{display:inline-block;width:4px;height:17px;background:var(--accent);border-radius:2px;margin-left:2px;vertical-align:text-bottom;animation:cursor-blink .8s ease-in-out infinite}
+    @keyframes cursor-blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+    /* Tool cards */
+    .tool-card{margin:6px 0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg-raised);overflow:hidden;animation:tool-in .2s ease-out}
+    @keyframes tool-in{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+    .tool-card-header{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none;transition:background .15s}
+    .tool-card-header:hover{background:var(--surface-hover)}
+    .tool-icon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0}
+    .tool-icon.code{background:rgba(94,168,217,.15);color:var(--accent)}
+    .tool-icon.file{background:rgba(155,142,196,.15);color:var(--purple)}
+    .tool-icon.list{background:rgba(107,174,138,.15);color:var(--success)}
+    .tool-icon.cmd{background:rgba(212,168,92,.15);color:var(--warning)}
+    .tool-name{font-size:.75rem;font-weight:600;font-family:var(--font-mono)}
+    .tool-status{margin-left:auto;font-size:.6875rem;font-weight:500;padding:2px 8px;border-radius:var(--radius-full)}
+    .tool-status.running{background:rgba(212,168,92,.15);color:var(--warning)}
+    .tool-status.done{background:rgba(107,174,138,.12);color:var(--success)}
+    .tool-chevron{font-size:.7rem;color:var(--text-muted);transition:transform .2s}
+    .tool-chevron.open{transform:rotate(90deg)}
+    .tool-card-body{border-top:1px solid var(--border);padding:10px 12px;display:none;max-height:240px;overflow-y:auto}
+    .tool-card-body.open{display:block}
+    .tool-card-body pre{font-family:var(--font-mono);font-size:.7rem;line-height:1.5;color:var(--text-secondary);white-space:pre-wrap;word-break:break-word;margin:0;background:var(--bg);padding:8px;border-radius:4px;border:1px solid var(--border-light)}
+    .running-dots{display:inline-flex;gap:3px;margin-left:4px}
+    .running-dots span{width:4px;height:4px;border-radius:50%;background:var(--warning);animation:dot-bounce 1.2s ease-in-out infinite}
+    .running-dots span:nth-child(2){animation-delay:.15s}
+    .running-dots span:nth-child(3){animation-delay:.3s}
+    @keyframes dot-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+    /* Empty state */
+    .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;animation:fade-in .5s ease-out}
+    @keyframes fade-in{from{opacity:0}to{opacity:1}}
+    .empty-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent-dim),rgba(94,168,217,.04));border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px}
+    .empty-title{font-size:1.4rem;font-weight:700;margin-bottom:6px;letter-spacing:-.02em}
+    .empty-subtitle{font-size:var(--fs-base);color:var(--text-secondary);max-width:380px;margin-bottom:6px}
+    .cap-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:22px}
+    .cap-chip{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;padding:5px 11px;border-radius:var(--radius-full);background:var(--surface);border:1px solid var(--border);color:var(--text-secondary)}
+    .cap-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+    .suggestions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:500px}
+    .sug-chip{font-size:.8125rem;padding:8px 15px;border-radius:var(--radius-full);background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit}
+    .sug-chip:hover{background:var(--surface-hover);border-color:var(--accent);color:var(--text);transform:translateY(-1px)}
+
+    /* Composer */
+    .composer-area{flex-shrink:0;padding:0 20px 18px;background:var(--bg)}
+    .composer-inner{width:100%;max-width:var(--content-max);margin:0 auto}
+    .file-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+    .file-tag{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;padding:5px 10px;border-radius:var(--radius-full);background:var(--accent-dim);border:1px solid rgba(94,168,217,.15);color:var(--accent-strong);animation:fade-in .2s ease-out}
+    .file-tag-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .file-tag-ext{font-size:.6rem;background:var(--surface);padding:1px 6px;border-radius:3px;color:var(--text-muted);font-weight:600;letter-spacing:.04em}
+    .file-tag-rem{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.85rem;padding:0;line-height:1;width:16px;height:16px;border-radius:50%;transition:background .15s;display:flex;align-items:center;justify-content:center}
+    .file-tag-rem:hover{background:rgba(94,168,217,.2);color:var(--text)}
+    .composer-box{display:flex;align-items:flex-end;gap:8px;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px 8px 8px 14px;transition:border-color .2s,box-shadow .2s}
+    .composer-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+    .composer-box textarea{flex:1;background:transparent;border:none;color:var(--text);font-size:var(--fs-base);font-family:inherit;line-height:1.5;resize:none;outline:none;padding:4px 0;min-height:24px;max-height:150px}
+    .composer-box textarea::placeholder{color:var(--text-muted)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s;flex-shrink:0}
+    .btn-icon{width:34px;height:34px;border-radius:6px;background:transparent;color:var(--text-muted);font-size:1.1rem}
+    .btn-icon:hover{background:var(--surface-hover);color:var(--text)}
+    .btn-send{width:34px;height:34px;border-radius:6px;background:var(--accent);color:#fff;font-size:1rem;opacity:.3;pointer-events:none;transition:opacity .2s,background .15s}
+    .btn-send.active{opacity:1;pointer-events:auto}
+    .btn-send.active:hover{background:var(--accent-strong)}
+    .btn-stop{width:34px;height:34px;border-radius:6px;background:var(--error);color:#fff;font-size:.8rem;animation:fade-in .2s ease-out}
+    .btn-stop:hover{background:#e8807a}
+    .composer-hint{text-align:center;font-size:.6875rem;color:var(--text-muted);margin-top:7px;user-select:none}
+
+    /* Scrollbar */
+    .messages::-webkit-scrollbar,.conv-list::-webkit-scrollbar{width:4px}
+    .messages::-webkit-scrollbar-track,.conv-list::-webkit-scrollbar-track{background:transparent}
+    .messages::-webkit-scrollbar-thumb,.conv-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+    .messages::-webkit-scrollbar-thumb:hover,.conv-list::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+
+    @media(max-width:700px){
+      .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:20;transform:translateX(-100%)}
+      .sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.5)}
+      .sidebar-toggle{display:flex;align-items:center;justify-content:center}
+      .header{padding:10px 12px 10px 48px}
+    }
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 </head>
 <body>
 <div id="root"></div>
-
 <script type="module">
 import { createElement as h, useState, useRef, useEffect, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -609,427 +176,337 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 const STORAGE_KEY = 'chatbi_conv_id'
-
-/* ── Tool icon map ── */
+const SUGGESTIONS = [
+  { icon:'📊', label:'Run EDA on my data' },
+  { icon:'🔮', label:'Forecast demand for next quarter' },
+  { icon:'📦', label:'ABC/XYZ classification' },
+  { icon:'📉', label:'Optimize safety stock' },
+  { icon:'💰', label:'Competitive pricing analysis' },
+]
+const CAPS = [
+  { dot:'#5ea8d9', label:'Sandbox: Python, Files, Shell' },
+  { dot:'#6bae8a', label:'Memory: Session Persistence' },
+  { dot:'#9b8ec4', label:'Gateway: AI_GATEWAY_MODEL' },
+]
 const TOOL_META = {
-  code_interpreter: { icon: '🐍', cls: 'code', label: 'Python' },
-  read_file:        { icon: '📄', cls: 'file', label: 'Read File' },
-  list_files:       { icon: '📂', cls: 'list', label: 'List Files' },
-  commands:         { icon: '⚡', cls: 'cmd',  label: 'Shell' },
-  browser:          { icon: '🌐', cls: 'file', label: 'Browser' },
+  code_interpreter:{ icon:'🐍', cls:'code', label:'Python' },
+  read_file:{ icon:'📄', cls:'file', label:'Read File' },
+  list_files:{ icon:'📂', cls:'list', label:'List Files' },
 }
 
-/* ── Suggestions ── */
-const SUGGESTIONS = [
-  { icon: '📊', label: 'Run EDA on my data' },
-  { icon: '🔮', label: 'Forecast demand for next quarter' },
-  { icon: '📦', label: 'ABC/XYZ classification' },
-  { icon: '📉', label: 'Optimize safety stock' },
-  { icon: '💰', label: 'Competitive pricing analysis' },
-]
+/* ═══════════════════════════════
+   API helpers
+   ═══════════════════════════════ */
+const QS = window.location.search || ''
 
-/* ── Platform capabilities shown in empty state ── */
-const CAPABILITIES = [
-  { dot: '#5ea8d9', label: 'Sandbox: Python · Files · Shell' },
-  { dot: '#6bae8a', label: 'Memory: Session Persistence' },
-  { dot: '#9b8ec4', label: 'Gateway: AI_GATEWAY_MODEL' },
-  { dot: '#d4a85c', label: 'Trace: Auto Observability' },
-]
+async function apiListConversations() {
+  const r = await fetch('/conversations' + QS)
+  const d = await r.json()
+  return d.conversations || []
+}
 
-/* ── Tool Call Card component ── */
-function ToolCard({ toolCall, defaultOpen }) {
+async function apiGetHistory(cid) {
+  const r = await fetch('/history' + QS, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ conversation_id:cid })
+  })
+  const d = await r.json()
+  return d.messages || []
+}
+
+async function apiDeleteConversation(cid) {
+  await fetch('/delete-conversation' + QS, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ conversation_id:cid })
+  })
+}
+
+/* ═══════════════════════════════
+   Components
+   ═══════════════════════════════ */
+
+function ToolCard({ tc, defaultOpen }) {
   const [open, setOpen] = useState(defaultOpen !== false)
-  const meta = TOOL_META[toolCall.name] || { icon: '🔧', cls: 'code', label: toolCall.name }
-
-  return h('div', { className: 'tool-card' },
-    h('div', { className: 'tool-card-header', onClick: () => setOpen(!open) },
-      h('span', { className: 'tool-icon ' + meta.cls }, meta.icon),
-      h('span', { className: 'tool-name' }, meta.label),
-      toolCall.status === 'running'
-        ? h('span', { className: 'tool-status running' }, 'running', h('span', { className: 'running-dots' }, h('span'), h('span'), h('span')))
-        : toolCall.result
-          ? h('span', { className: 'tool-status done' }, '✓ done')
-          : null,
-      h('span', { className: 'tool-chevron' + (open ? ' open' : '') }, '▶')
+  const m = TOOL_META[tc.name] || { icon:'🔧', cls:'code', label:tc.name }
+  return h('div',{className:'tool-card'},
+    h('div',{className:'tool-card-header',onClick:()=>setOpen(!open)},
+      h('span',{className:'tool-icon '+m.cls},m.icon),
+      h('span',{className:'tool-name'},m.label),
+      tc.status==='running'
+        ? h('span',{className:'tool-status running'},'running',h('span',{className:'running-dots'},h('span'),h('span'),h('span')))
+        : tc.result ? h('span',{className:'tool-status done'},'✓ done') : null,
+      h('span',{className:'tool-chevron'+(open?' open':'')},'▶')
     ),
-    h('div', { className: 'tool-card-body' + (open ? ' open' : '') },
-      toolCall.args && Object.keys(toolCall.args).length > 0 && h('div', { className: 'tool-meta' },
-        h('span', null, 'Args: ' + Object.entries(toolCall.args).map(([k,v]) => {
-          const str = typeof v === 'string' ? v : JSON.stringify(v)
-          return k + '=' + (str.length > 80 ? str.slice(0, 80) + '...' : str)
-        }).join(', '))
+    h('div',{className:'tool-card-body'+(open?' open':'')},
+      tc.args && Object.keys(tc.args).length>0 && h('div',{style:{fontSize:'.65rem',color:'var(--text-muted)',marginBottom:'6px'}},
+        Object.entries(tc.args).map(([k,v])=>{
+          const s = typeof v==='string' ? v : JSON.stringify(v)
+          return k+': '+(s.length>100?s.slice(0,100)+'...':s)
+        }).join(' | ')
       ),
-      toolCall.result
-        ? h('pre', null, toolCall.result)
-        : h('pre', { style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Running...')
+      tc.result
+        ? h('pre',null,tc.result)
+        : h('pre',{style:{color:'var(--text-muted)',fontStyle:'italic'}},'Running...')
     )
   )
 }
 
-/* ── Code block with language tag ── */
 function CodeBlock({ language, children }) {
   const lang = language || 'text'
-  return h('div', { className: 'code-block-wrapper' },
-    h('pre', null, h('code', { className: `language-${lang}` }, children)),
-    lang !== 'text' && h('span', { className: 'code-lang-tag' }, lang)
+  return h('div',{style:{position:'relative',margin:'.8em 0'}},
+    h('pre',null,h('code',{className:lang!=='text'?'language-'+lang:''},children)),
+    lang!=='text' && h('span',{className:'code-lang'},lang)
   )
 }
 
-/* ── Main App ── */
+function EmptyState({ onChip }) {
+  return h('div',{className:'empty-state'},
+    h('div',{className:'empty-icon'},'📊'),
+    h('h2',{className:'empty-title'},'Welcome to ChatBI'),
+    h('p',{className:'empty-subtitle'},'Your AI supply chain analyst. Upload data or ask a question.'),
+    h('div',{className:'cap-row'},
+      CAPS.map((c,i)=>h('span',{key:i,className:'cap-chip'},
+        h('span',{className:'cap-dot',style:{background:c.dot}}),c.label
+      ))
+    ),
+    h('div',{className:'suggestions'},
+      SUGGESTIONS.map((s,i)=>h('button',{key:i,className:'sug-chip',onClick:()=>onChip(s.label)},s.icon+'  '+s.label))
+    )
+  )
+}
+
+/* ═══════════════════════════════
+   Sidebar
+   ═══════════════════════════════ */
+function Sidebar({ convId, conversations, onSelect, onNew, onDelete, mobileOpen, onClose }) {
+  const fmtTime = (ts) => {
+    if(!ts)return''
+    const d=new Date(ts)
+    if(isNaN(d.getTime()))return''
+    const now=new Date()
+    const diff=now-d
+    if(diff<86400000)return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+    if(diff<604800000)return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]
+    return d.toLocaleDateString([],{month:'short',day:'numeric'})
+  }
+
+  return h('div',{className:'sidebar'+(mobileOpen?' open':'')},
+    h('div',{className:'sidebar-header'},
+      h('div',{className:'sidebar-logo'},'📊'),
+      h('span',{className:'sidebar-title'},'ChatBI'),
+      h('span',{className:'sidebar-spacer'}),
+      h('button',{className:'btn-new',onClick:onNew},'+ New')
+    ),
+    h('div',{className:'conv-list'},
+      conversations.length===0
+        ? h('div',{className:'sidebar-empty'},'No conversations yet.\nStart a new chat!')
+        : conversations.map(c=>h('div',{
+            key:c.id,className:'conv-item'+(c.id===convId?' active':''),
+            onClick:()=>{onSelect(c.id);onClose()}
+          },
+            h('span',{className:'conv-text'},c.title||c.id.slice(0,8)+'...'),
+            h('span',{className:'conv-time'},fmtTime(c.updated_at||c.created_at)),
+            h('button',{className:'conv-delete',onClick:e=>{e.stopPropagation();onDelete(c.id)},title:'Delete'},'×')
+          ))
+    )
+  )
+}
+
+/* ═══════════════════════════════
+   App
+   ═══════════════════════════════ */
+
 function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [files, setFiles] = useState([])
   const [modelName, setModelName] = useState('')
-  const [sessionSaved, setSessionSaved] = useState(false)
-  const [statusText, setStatusText] = useState('')  // thinking / executing / aborted
-  const [convId] = useState(() => localStorage.getItem(STORAGE_KEY) || crypto.randomUUID())
+  const [saved, setSaved] = useState(false)
+  const [statusText, setStatusText] = useState('')
+  const [convId, setConvId] = useState(()=>localStorage.getItem(STORAGE_KEY)||crypto.randomUUID())
+  const [conversations, setConversations] = useState([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const msgsRef = useRef(null)
-  const textareaRef = useRef(null)
+  const taRef = useRef(null)
   const ctrlRef = useRef(null)
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, convId) }, [convId])
+  useEffect(()=>{localStorage.setItem(STORAGE_KEY,convId)},[convId])
+  useEffect(()=>{
+    const el=msgsRef.current
+    if(el){const s=el.scrollHeight-el.scrollTop-el.clientHeight<200;el.scrollTo({top:el.scrollHeight,behavior:s?'smooth':'auto'})}
+  },[messages])
+  useEffect(()=>{
+    const ta=taRef.current
+    if(ta){ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,150)+'px'}
+  },[input])
+  useEffect(()=>{if(saved){const t=setTimeout(()=>setSaved(false),2500);return()=>clearTimeout(t)}},[saved])
 
-  /* Auto-scroll */
-  useEffect(() => {
-    const el = msgsRef.current
-    if (el) {
-      const smooth = el.scrollHeight - el.scrollTop - el.clientHeight < 200
-      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
-    }
-  }, [messages])
+  /* Load conversation list */
+  const loadConversations = useCallback(async()=>{
+    try{const list=await apiListConversations();setConversations(list)}catch{}
+  },[])
+  useEffect(()=>{loadConversations()},[])
 
-  /* Auto-grow textarea */
-  useEffect(() => {
-    const ta = textareaRef.current
-    if (ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 160) + 'px' }
-  }, [input])
-
-  /* Flash session-saved indicator */
-  useEffect(() => {
-    if (sessionSaved) {
-      const t = setTimeout(() => setSessionSaved(false), 2500)
-      return () => clearTimeout(t)
-    }
-  }, [sessionSaved])
-
-  const addMsg = useCallback((role, content, extra) => {
-    const id = crypto.randomUUID()
-    setMessages(prev => [...prev, { id, role, content, streaming: role === 'assistant', ...extra }])
-    return id
-  }, [])
-
-  const updateLast = useCallback((content) => {
-    setMessages(prev => { const next = [...prev]; if (next.length) next[next.length - 1] = { ...next[next.length - 1], content, streaming: true }; return next })
-  }, [])
-
-  const finishLast = useCallback(() => {
-    setMessages(prev => { const next = [...prev]; if (next.length) next[next.length - 1] = { ...next[next.length - 1], streaming: false }; return next })
-  }, [])
-
-  /* Add or update a tool call message */
-  const addToolCall = useCallback((tcId, data) => {
-    setMessages(prev => {
-      const existing = prev.findIndex(m => m.toolCallId === tcId)
-      if (existing >= 0) {
-        const next = [...prev]
-        next[existing] = { ...next[existing], ...data }
-        return next
+  /* Switch conversation */
+  const switchConv = useCallback(async(cid)=>{
+    setConvId(cid)
+    try{
+      const msgs=await apiGetHistory(cid)
+      if(msgs.length>0){
+        setMessages(msgs.map(m=>({id:m.id||crypto.randomUUID(),role:m.role,content:m.content,streaming:false})))
+      }else{
+        setMessages([])
       }
-      return [...prev, { id: crypto.randomUUID(), role: 'tool', toolCallId: tcId, ...data }]
+    }catch{setMessages([])}
+  },[])
+
+  /* New chat */
+  const newChat = useCallback(()=>{
+    const id=crypto.randomUUID()
+    setConvId(id)
+    setMessages([])
+    setModelName('')
+    setStatusText('')
+  },[])
+
+  /* Delete conversation */
+  const deleteConv = useCallback(async(cid)=>{
+    await apiDeleteConversation(cid)
+    if(cid===convId){newChat()}
+    loadConversations()
+  },[convId,newChat,loadConversations])
+
+  const addMsg = useCallback((role,content,extra)=>{
+    const id=crypto.randomUUID()
+    setMessages(p=>[...p,{id,role,content,streaming:role==='assistant',...extra}])
+    return id
+  },[])
+  const updateLast = useCallback((content)=>{
+    setMessages(p=>{const n=[...p];if(n.length)n[n.length-1]={...n[n.length-1],content,streaming:true};return n})
+  },[])
+  const finishLast = useCallback(()=>{
+    setMessages(p=>{const n=[...p];if(n.length)n[n.length-1]={...n[n.length-1],streaming:false};return n})
+  },[])
+  const addToolMsg = useCallback((tcId,data)=>{
+    setMessages(p=>{
+      const ei=p.findIndex(m=>m.toolCallId===tcId)
+      if(ei>=0){const n=[...p];n[ei]={...n[ei],...data};return n}
+      return[...p,{id:crypto.randomUUID(),role:'tool',toolCallId:tcId,...data}]
     })
-  }, [])
+  },[])
 
-  const handleSend = async () => {
-    const text = input.trim()
-    if ((!text && !files.length) || loading) return
+  const handleSend = async()=>{
+    const text=input.trim()
+    if((!text&&!files.length)||loading)return
     setInput('')
-    const currentFiles = [...files]
-    setFiles([])
+    const cf=[...files];setFiles([])
 
-    let display = text
-    if (currentFiles.length) {
-      const names = currentFiles.map(f => '📄 ' + f.name).join(', ')
-      display = text ? names + '\n' + text : names
-    }
-    addMsg('user', display)
-    addMsg('assistant', '')
+    let display=text
+    if(cf.length){const names=cf.map(f=>'📄 '+f.name).join(', ');display=text?names+'\n'+text:names}
+    addMsg('user',display)
+    addMsg('assistant','')
     setLoading(true)
     setStatusText('Thinking...')
 
-    ctrlRef.current = new AbortController()
-    try {
-      const payload = {
-        message: text,
-        files: currentFiles.map(f => ({ name: f.name, content: f.content, mimeType: f.mimeType || 'text/csv' }))
-      }
-      const qs = window.location.search || ''
-      const res = await fetch('/chat' + qs, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'makers-conversation-id': convId },
-        body: JSON.stringify(payload),
-        signal: ctrlRef.current.signal
-      })
-      const reader = res.body.getReader(), decoder = new TextDecoder()
-      let buffer = '', text2 = ''
-      // ── Client-side chunk buffering for smooth rendering ──
-      let flushTimer = null
-      const flushText = () => {
-        flushTimer = null
-        updateLast(text2)
-      }
+    ctrlRef.current=new AbortController()
+    try{
+      const payload={message:text,files:cf.map(f=>({name:f.name,content:f.content,mimeType:f.mimeType||'text/csv'}))}
+      const res=await fetch('/chat'+QS,{method:'POST',headers:{'Content-Type':'application/json','makers-conversation-id':convId},body:JSON.stringify(payload),signal:ctrlRef.current.signal})
+      const reader=res.body.getReader(),decoder=new TextDecoder()
+      let buf='',text2='',flushTimer=null
+      const flush=()=>{flushTimer=null;updateLast(text2)}
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const parts = buffer.split('\n\n'); buffer = parts.pop() || ''
-        for (const part of parts) {
-          for (const line of part.split('\n')) {
-            if (!line.startsWith('data: ')) continue
-            const d = line.slice(6)
-            if (d === '[DONE]') {
-              if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
-              updateLast(text2)
-              finishLast()
-              setSessionSaved(true)
-              setStatusText('')
-              break
+      while(true){
+        const{done,value}=await reader.read()
+        if(done)break
+        buf+=decoder.decode(value,{stream:true})
+        const parts=buf.split('\n\n');buf=parts.pop()||''
+        for(const part of parts){
+          for(const line of part.split('\n')){
+            if(!line.startsWith('data: '))continue
+            const d=line.slice(6)
+            if(d==='[DONE]'){
+              if(flushTimer){clearTimeout(flushTimer);flushTimer=null}
+              updateLast(text2);finishLast();setSaved(true);setStatusText('');loadConversations();break
             }
-            try {
-              const j = JSON.parse(d)
-              switch (j.type) {
-                case 'model_info':
-                  setModelName(j.model || '')
-                  break
-                case 'status':
-                  setStatusText(j.status === 'thinking' ? 'Thinking...' : j.status === 'executing' ? 'Executing...' : '')
-                  break
-                case 'tool_call':
-                  addToolCall(j.id || j.name + '_' + Date.now(), {
-                    name: j.name,
-                    args: j.args || {},
-                    status: 'running',
-                    result: null,
-                  })
-                  break
-                case 'tool_result':
-                  setMessages(prev => {
-                    const next = [...prev]
-                    for (let i = next.length - 1; i >= 0; i--) {
-                      if (next[i].role === 'tool' && next[i].toolCallId === j.id) {
-                        next[i] = { ...next[i], status: 'done', result: j.preview || '', fullResult: j.length || 0 }
-                        return next
-                      }
-                    }
-                    for (let i = next.length - 1; i >= 0; i--) {
-                      if (next[i].role === 'tool' && next[i].status === 'running') {
-                        next[i] = { ...next[i], status: 'done', result: j.preview || '', fullResult: j.length || 0 }
-                        return next
-                      }
-                    }
-                    return next
-                  })
-                  break
-                case 'ai_response':
-                  if (j.content) {
-                    text2 += j.content
-                    // Buffer: only update React every ~50ms for smooth rendering
-                    if (!flushTimer) {
-                      flushTimer = setTimeout(flushText, 50)
-                    }
-                  }
-                  break
-                case 'error_message':
-                  if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
-                  updateLast(text2 + '\n\n⚠️ ' + j.content)
-                  finishLast()
-                  setStatusText('')
-                  break
+            try{const j=JSON.parse(d)
+              switch(j.type){
+                case'model_info':setModelName(j.model||'');break
+                case'status':setStatusText(j.status==='thinking'?'Thinking...':j.status==='executing'?'Executing...':'');break
+                case'tool_call':addToolMsg(j.id||j.name+'_'+Date.now(),{name:j.name,args:j.args||{},status:'running',result:null});break
+                case'tool_result':setMessages(p=>{const n=[...p];for(let i=n.length-1;i>=0;i--){if(n[i].role==='tool'&&n[i].toolCallId===j.id){n[i]={...n[i],status:'done',result:j.preview||'',fullResult:j.length||0};return n}}for(let i=n.length-1;i>=0;i--){if(n[i].role==='tool'&&n[i].status==='running'){n[i]={...n[i],status:'done',result:j.preview||'',fullResult:j.length||0};return n}}return n});break
+                case'ai_response':if(j.content){text2+=j.content;if(!flushTimer)flushTimer=setTimeout(flush,50)};break
+                case'error_message':if(flushTimer){clearTimeout(flushTimer);flushTimer=null};updateLast(text2+'\n\n⚠️ '+j.content);finishLast();setStatusText('');break
               }
-            } catch {}
+            }catch{}
           }
         }
       }
-      // Final flush
-      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
-    } catch (e) {
-      if (e.name !== 'AbortError') updateLast('⚠️ ' + (e.message || 'Request failed'))
-      finishLast()
-    }
-    setLoading(false); ctrlRef.current = null
+      if(flushTimer){clearTimeout(flushTimer);flushTimer=null}
+    }catch(e){if(e.name!=='AbortError')updateLast('⚠️ '+(e.message||'Request failed'));finishLast()}
+    setLoading(false);ctrlRef.current=null
   }
 
-  const handleStop = () => { ctrlRef.current?.abort(); setLoading(false); finishLast(); setStatusText('') }
-  const handleChipClick = (label) => { setInput(label); setTimeout(() => textareaRef.current?.focus(), 50) }
-
-  const handleFile = (e) => {
-    for (const file of e.target.files || []) {
-      const reader = new FileReader()
-      reader.onload = () => setFiles(prev => [...prev, { name: file.name, content: reader.result.split(',')[1], mimeType: file.type }])
-      reader.readAsDataURL(file)
+  const handleStop=()=>{ctrlRef.current?.abort();setLoading(false);finishLast();setStatusText('')}
+  const handleChip=label=>{setInput(label);setTimeout(()=>taRef.current?.focus(),50)}
+  const handleFile=e=>{
+    for(const file of e.target.files||[]){
+      const r=new FileReader()
+      r.onload=()=>setFiles(p=>[...p,{name:file.name,content:r.result.split(',')[1],mimeType:file.type}])
+      r.readAsDataURL(file)
     }
-    e.target.value = ''
+    e.target.value=''
   }
+  const handleKey=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend()}}
+  const canSend=(input.trim()||files.length)&&!loading
 
-  const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }
-  const canSend = (input.trim() || files.length) && !loading
-
-  return h('div', { className: 'app' },
-
-    /* ── Header ── */
-    h('header', { className: 'header' },
-      h('div', { className: 'header-inner' },
-        h('div', { className: 'header-logo' }, '📊'),
-        h('span', { className: 'header-title' }, 'ChatBI Agent'),
-        h('span', { className: 'header-spacer' }),
-        modelName && h('span', { className: 'model-badge', title: 'AI Gateway Model' },
-          h('span', { className: 'dot' }), modelName
-        ),
-        h('span', { className: 'session-indicator' + (sessionSaved ? ' visible' : '') }, '💾 Saved')
-      )
-    ),
-
-    /* ── Status pill — animated, inside header area ── */
-    statusText && h('div', {
-      style: {
-        textAlign: 'center', padding: '4px 0 6px', flexShrink: 0,
-        background: 'var(--bg)',
-      }
-    },
-      h('span', {
-        style: {
-          display: 'inline-flex', alignItems: 'center', gap: '7px',
-          fontSize: '0.75rem', fontWeight: 500,
-          color: statusText === 'Executing...' ? 'var(--warning)' : 'var(--accent-strong)',
-          background: statusText === 'Executing...' ? 'rgba(212,168,92,0.1)' : 'var(--accent-dim)',
-          border: '1px solid ' + (statusText === 'Executing...' ? 'rgba(212,168,92,0.25)' : 'rgba(94,168,217,0.2)'),
-          padding: '5px 14px', borderRadius: 'var(--radius-full)',
-          animation: 'pulse-text 1.4s ease-in-out infinite',
-        }
-      },
-        h('span', { className: 'running-dots' }, h('span'), h('span'), h('span')),
-        statusText
-      )
-    ),
-
-    /* ── Messages ── */
-    h('div', { className: 'messages', ref: msgsRef, role: 'log', 'aria-live': 'polite', 'aria-label': 'Conversation' },
-
-      messages.length === 0
-        ? h('div', { className: 'empty-state' },
-            h('div', { className: 'empty-icon' }, '📊'),
-            h('h2', { className: 'empty-title' }, 'Welcome to ChatBI'),
-            h('p', { className: 'empty-subtitle' },
-              'Your AI supply chain analyst — powered by EdgeOne Makers sandbox.'
-            ),
-            h('div', { className: 'capability-row' },
-              CAPABILITIES.map((c, i) =>
-                h('span', { key: i, className: 'capability-chip' },
-                  h('span', { className: 'chip-dot', style: { background: c.dot } }),
-                  c.label
+  return h('div',{className:'app'},
+    h('button',{className:'sidebar-toggle',onClick:()=>setSidebarOpen(!sidebarOpen),'aria-label':'Toggle sidebar'},'☰'),
+    h(Sidebar,{convId,conversations,onSelect:switchConv,onNew:newChat,onDelete:deleteConv,mobileOpen:sidebarOpen,onClose:()=>setSidebarOpen(false)}),
+    h('div',{className:'main'},
+      h('header',{className:'header'},
+        h('span',{className:'header-title'},'📊 ChatBI Agent'),
+        h('span',{className:'header-spacer'}),
+        modelName&&h('span',{className:'model-badge'},h('span',{className:'dot'}),modelName),
+        h('span',{className:'saved-dot'+(saved?' show':'')},'💾 Saved')
+      ),
+      statusText&&h('div',{className:'status-pill'},h('span',h('span',{className:'running-dots'},h('span'),h('span'),h('span')),statusText)),
+      h('div',{className:'messages',ref:msgsRef,role:'log','aria-live':'polite','aria-label':'Conversation'},
+        messages.length===0
+          ? h(EmptyState,{onChip:handleChip})
+          : h('div',{className:'messages-inner'},
+              messages.map(m=>{
+                if(m.role==='tool')return h(ToolCard,{key:m.id,tc:m,defaultOpen:m.status==='running'})
+                return h('div',{key:m.id,className:'turn '+(m.role==='user'?'turn-user':'turn-assistant')},
+                  h('div',{className:'turn-label'},m.role==='user'?'You':'ChatBI'),
+                  m.role==='user'
+                    ? h('div',{className:'msg-user'},m.content)
+                    : h('div',{className:'msg-assistant'},
+                        h(ReactMarkdown,{remarkPlugins:[remarkGfm],components:{code({node,inline,className,children,...props}){if(inline)return h('code',{...props},children);const match=/language-(\w+)/.exec(className||'');return h(CodeBlock,{language:match?match[1]:null},String(children).replace(/\n$/,''))}}},m.content||''),
+                        m.streaming&&h('span',{className:'streaming-cursor','aria-hidden':'true'})
+                      )
                 )
-              )
-            ),
-            h('div', { className: 'suggestions' },
-              SUGGESTIONS.map((s, i) =>
-                h('button', {
-                  key: i, className: 'suggestion-chip',
-                  onClick: () => handleChipClick(s.label),
-                  'aria-label': s.label
-                }, s.icon + '  ' + s.label)
-              )
+              })
             )
-          )
-        : h('div', { className: 'messages-inner' },
-            messages.map(m => {
-              // Tool call cards
-              if (m.role === 'tool') {
-                return h('div', { key: m.id, style: { paddingLeft: 0 } },
-                  h(ToolCard, { toolCall: m, defaultOpen: m.status === 'running' })
-                )
-              }
-              // User / assistant turns
-              return h('div', {
-                key: m.id,
-                className: 'turn ' + (m.role === 'user' ? 'turn-user' : 'turn-assistant'),
-              },
-                h('div', { className: 'turn-label' }, m.role === 'user' ? 'You' : 'ChatBI'),
-                m.role === 'user'
-                  ? h('div', { className: 'msg-user' }, m.content)
-                  : h('div', { className: 'msg-assistant' },
-                      h(ReactMarkdown, {
-                        remarkPlugins: [remarkGfm],
-                        components: {
-                          code({ node, inline, className, children, ...props }) {
-                            if (inline) return h('code', { ...props }, children)
-                            const match = /language-(\w+)/.exec(className || '')
-                            return h(CodeBlock, { language: match ? match[1] : null }, String(children).replace(/\n$/, ''))
-                          }
-                        }
-                      }, m.content || ''),
-                      m.streaming && h('span', { className: 'streaming-cursor', 'aria-hidden': 'true' })
-                    )
-              )
-            })
-          )
-    ),
-
-    /* ── File Tags ── */
-    files.length > 0 && h('div', { style: { padding: '0 var(--content-padding)', flexShrink: 0 } },
-      h('div', { style: { maxWidth: 'var(--content-max)', margin: '0 auto', width: '100%' } },
-        h('div', { className: 'file-tags' },
-          files.map((f, i) => {
-            const ext = (f.name || '').split('.').pop()?.toUpperCase() || 'FILE'
-            return h('span', { key: i, className: 'file-tag' },
-              h('span', { className: 'file-tag-name' }, '📄 ' + f.name),
-              h('span', { style: { fontSize: '0.6rem', background: 'var(--surface)', padding: '1px 6px', borderRadius: '3px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em' } }, ext),
-              h('button', {
-                className: 'file-tag-remove',
-                onClick: () => setFiles(prev => prev.filter((_, j) => j !== i)),
-                'aria-label': 'Remove ' + f.name
-              }, '×')
-            )
-          })
+      ),
+      files.length>0&&h('div',{style:{padding:'0 20px',flexShrink:0}},
+        h('div',{style:{maxWidth:'var(--content-max)',margin:'0 auto',width:'100%'}},
+          h('div',{className:'file-tags'},files.map((f,i)=>{const ext=(f.name||'').split('.').pop()?.toUpperCase()||'FILE';return h('span',{key:i,className:'file-tag'},h('span',{className:'file-tag-name'},'📄 '+f.name),h('span',{className:'file-tag-ext'},ext),h('button',{className:'file-tag-rem',onClick:()=>setFiles(p=>p.filter((_,j)=>j!==i)),'aria-label':'Remove '+f.name},'×'))}))
         )
-      )
-    ),
-
-    /* ── Composer ── */
-    h('div', { className: 'composer-area' },
-      h('div', { className: 'composer-inner' },
-        h('div', { className: 'composer-box' },
-          h('button', {
-            className: 'btn btn-icon',
-            onClick: () => document.getElementById('file-input').click(),
-            title: 'Attach file', 'aria-label': 'Attach file'
-          }, '📎'),
-          h('input', {
-            id: 'file-input', type: 'file',
-            accept: '.csv,.xlsx,.xls,.json,.txt',
-            multiple: true, onChange: handleFile,
-            style: { display: 'none' }
-          }),
-          h('textarea', {
-            ref: textareaRef, value: input,
-            onChange: e => setInput(e.target.value),
-            onKeyDown: handleKey,
-            placeholder: loading ? 'ChatBI is replying...' : 'Ask about your supply chain data...',
-            rows: 1,
-            'aria-label': 'Message input'
-          }),
-          loading
-            ? h('button', { className: 'btn btn-stop', onClick: handleStop, 'aria-label': 'Stop generating' }, '■')
-            : h('button', {
-                className: 'btn btn-send' + (canSend ? ' active' : ''),
-                onClick: handleSend, disabled: !canSend,
-                'aria-label': 'Send message'
-              }, '↑')
-        ),
-        h('div', { className: 'composer-hint' },
-          'Enter to send · Shift+Enter for new line',
-          modelName ? ` · Model: ${modelName}` : ''
+      ),
+      h('div',{className:'composer-area'},
+        h('div',{className:'composer-inner'},
+          h('div',{className:'composer-box'},
+            h('button',{className:'btn btn-icon',onClick:()=>document.getElementById('finput').click(),title:'Attach file','aria-label':'Attach file'},'📎'),
+            h('input',{id:'finput',type:'file',accept:'.csv,.xlsx,.xls,.json,.txt',multiple:true,onChange:handleFile,style:{display:'none'}}),
+            h('textarea',{ref:taRef,value:input,onChange:e=>setInput(e.target.value),onKeyDown:handleKey,placeholder:loading?'ChatBI is replying...':'Ask about your supply chain data...',rows:1,'aria-label':'Message input'}),
+            loading
+              ? h('button',{className:'btn btn-stop',onClick:handleStop,'aria-label':'Stop generating'},'■')
+              : h('button',{className:'btn btn-send'+(canSend?' active':''),onClick:handleSend,disabled:!canSend,'aria-label':'Send message'},'↑')
+          ),
+          h('div',{className:'composer-hint'},'Enter to send · Shift+Enter for new line'+(modelName?' · Model: '+modelName:''))
         )
       )
     )
