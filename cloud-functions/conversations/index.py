@@ -1,24 +1,15 @@
-"""
-GET /conversations — list all conversations for the current user.
-"""
-from __future__ import annotations
-from typing import Any
+"""POST /conversations — list conversations for the current user."""
 
-async def handler(ctx: Any) -> Any:
-    store = getattr(ctx, "store", None) or getattr(getattr(ctx, "agent", None), "store", None)
-    if not store:
-        return {"conversations": [], "error": "store not available"}
-
+async def handler(ctx):
+    body = ctx.request.body or {}
+    limit = min(int(body.get("limit", 20)), 100)
     try:
-        conversations = await store.list_conversations(limit=30, order="desc")
-        result = []
-        for c in conversations:
-            result.append({
-                "id": c.get("id") or c.get("conversation_id", ""),
-                "created_at": c.get("created_at") or c.get("createdAt", ""),
-                "updated_at": c.get("updated_at") or c.get("updatedAt", ""),
-                "title": c.get("title") or c.get("metadata", {}).get("title", ""),
-            })
-        return {"conversations": result}
+        conversations = await ctx.store.list_conversations(limit=limit, order="desc")
+        return {"conversations": conversations}
     except Exception as e:
-        return {"conversations": [], "error": str(e)}
+        # fallback: try with user_id
+        try:
+            conversations = await ctx.store.list_conversations(limit=limit)
+            return {"conversations": conversations}
+        except:
+            return {"error": str(e)}, 500

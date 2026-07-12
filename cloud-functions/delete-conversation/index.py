@@ -1,22 +1,14 @@
-"""
-POST /delete-conversation — delete a conversation and its messages.
-"""
-from __future__ import annotations
-from typing import Any
+"""POST /delete-conversation — permanently delete a conversation."""
 
-async def handler(ctx: Any) -> Any:
-    store = getattr(ctx, "store", None) or getattr(getattr(ctx, "agent", None), "store", None)
-    if not store:
-        return {"ok": False, "error": "store not available"}
 
-    body = getattr(ctx.request, "body", {}) or {}
-    cid = body.get("conversation_id", "") if isinstance(body, dict) else ""
-
+async def handler(ctx):
+    body = ctx.request.body or {}
+    cid = body.get("conversation_id", "")
     if not cid:
-        return {"ok": False, "error": "missing conversation_id"}
+        return {"error": "conversation_id is required"}, 400
 
     try:
-        await store.delete_conversation(cid)
-        return {"ok": True, "deleted": cid}
+        await ctx.store.delete_conversation(cid)
+        return {"status": "deleted", "conversation_id": cid}
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        return {"error": str(e)}, 500
