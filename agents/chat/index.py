@@ -27,18 +27,18 @@ logger = create_logger("chatbi")
 SYSTEM_PROMPT = """You are ChatBI Agent, a supply chain data analyst running on EdgeOne Makers.
 
 ## Your Environment
-You have access to REAL tools — use them. Don't pretend to run code, actually call the tools.
+You have access to REAL tools — use them:
 
 | Tool | Purpose |
 |------|---------|
-| `code_interpreter` | Run Python to analyze data. Use pandas, numpy, matplotlib, scipy, statsmodels. Output (stdout + stderr) is returned. For charts, save to '/tmp/chart.png' with plt.savefig(). |
-| `read_file` | Read an uploaded CSV/Excel/JSON file into a pandas DataFrame. Returns first 20 rows preview + shape + dtypes. |
+| `code_interpreter` | Run Python to analyze data. **Python built-in modules only: csv, json, statistics, math, collections, itertools, datetime. NO pandas/numpy/matplotlib — pip install times out (60s).** Use csv.reader/csv.DictReader for data. Output (stdout + stderr) is returned. |
+| `read_file` | Read an uploaded CSV/Excel/JSON file. Returns shape, columns, dtypes, first 20 rows, summary stats. **Already gives you the data — use this instead of re-reading with code_interpreter.** |
 | `list_files` | List all uploaded files available for analysis. |
 
 ## Rules
 - When a user uploads a file, FIRST call `list_files`, then `read_file` to inspect it.
-- Run analyses with `code_interpreter`. Install packages with `!pip install ...`.
-- For charts: save to `/tmp/chart.png`. Use dark-themed matplotlib styles.
+- `read_file` already shows you the data. Start analysis from what it returns — DON'T re-read the file in code_interpreter.
+- For code_interpreter: use `import csv`, `csv.DictReader`, built-in `statistics` module. **NEVER use `!pip install` — it will timeout.**
 - Use Chinese when the user writes Chinese.
 
 ## CRITICAL — Conciseness
@@ -179,66 +179,69 @@ def _exec_python(code: str) -> str:
 
 
 def _read_file_preview(filename: str) -> str:
-    """Read an uploaded file and return a preview (pandas preferred, csv fallback)."""
+    """Read an uploaded file — returns rich preview with stats (csv built-in, no pandas needed)."""
     if filename not in _uploaded_files:
         available = ", ".join(_uploaded_files.keys()) or "(none)"
         return f"File '{filename}' not found. Available files: {available}"
 
     f = _uploaded_files[filename]
     raw = f["bytes"]
-    mime = f["mimeType"]
     tmp_path = Path("/tmp") / filename
     tmp_path.write_bytes(raw)
 
     try:
-        # Try pandas first
         code = f'''
-import sys
+import csv, statistics as st, sys
 path = "{tmp_path.as_posix()}"
-mime = "{mime}"
-try:
-    import pandas as pd
-    import io
-    if mime.endswith("csv") or path.endswith(".csv") or path.endswith(".txt"):
-        df = pd.read_csv(path, nrows=1000)
-    elif mime.endswith("excel") or path.endswith(".xlsx") or path.endswith(".xls"):
-        df = pd.read_excel(path, nrows=1000)
-    elif path.endswith(".json"):
-        df = pd.read_json(path, nrows=1000)
-    else:
-        df = pd.read_csv(path, nrows=1000)
-    print(f"Shape: {{df.shape[0]}} rows x {{df.shape[1]}} columns")
-    print(f"Columns: {{list(df.columns)}}")
-    print(f"Dtypes:\\n{{df.dtypes.to_string()}}")
-    print(f"First 20 rows:\\n{{df.head(20).to_string()}}")
-    nulls = df.isnull().sum()
-    if nulls.sum() > 0:
-        print(f"Missing values:\\n{{nulls.to_string()}}")
-    if df.describe().iloc[0].notna().any():
-        print(f"Summary stats:\\n{{df.describe().to_string()}}")
-except ImportError:
-    # Fallback: use built-in csv module
-    import csv
-    with open(path, 'r', newline='', encoding='utf-8-sig') as cf:
-        reader = csv.reader(cf)
-        rows = list(reader)
-    if not rows:
-        print("(empty file)")
-    else:
-        header = rows[0]
-        data = rows[1:]
-        print(f"Shape: {{len(data)}} rows x {{len(header)}} columns")
-        print(f"Columns: {{header}}")
-        print(f"First 20 rows:")
-        for i, row in enumerate(data[:20]):
-            print(row)
-        print(f"\\nNote: pandas not installed. Install with: pip install pandas")
+with open(path, 'r', newline='', encoding='utf-8-sig') as cf:
+    reader = csv.DictReader(cf)
+    data = [row for row in reader]
+if not data:
+    print("(empty file)")
+    sys.exit(0)
+cols = list(data[0].keys())
+print(f"Shape: {{len(data)}} rows x {{len(cols)}} columns")
+print(f"Columns: {{cols}}")
+# Detect numeric columns & compute stats
+num_cols = []
+for c in cols:
+    try:
+        [float(r[c]) for r in data]
+        num_cols.append(c)
+    except: pass
+if num_cols:
+    print(f"Numeric columns: {{num_cols}}")
+    for c in num_cols:
+        vals = [float(r[c]) for r in data]
+        print(f"  {{c}}: min={{min(vals):.2f}} max={{max(vals):.2f}} mean={{st.mean(vals):.2f}} sum={{sum(vals):.2f}}")
+# Categorical columns
+for c in cols:
+    if c not in num_cols:
+        uniq = sorted(set(str(r[c]) for r in data))
+        print(f"  {{c}}: unique values ({{len(uniq)}}): {{uniq}}")
+# First 20 rows
+print(f"First 20 rows:")
+for i, r in enumerate(data[:20]):
+    print(f"  [{{i}}] {{r}}")
+# Correlations for numeric
+if len(num_cols) >= 2:
+    print("Correlations:")
+    for c1 in num_cols:
+        for c2 in num_cols:
+            if c1 < c2:
+                v1 = [float(r[c1]) for r in data]
+                v2 = [float(r[c2]) for r in data]
+                m1, m2 = st.mean(v1), st.mean(v2)
+                num = sum((a-m1)*(b-m2) for a,b in zip(v1,v2))
+                den = (sum((a-m1)**2 for a in v1)*sum((b-m2)**2 for b in v2))**0.5
+                r = num/den if den else 0
+                if abs(r) > 0.5:
+                    print(f"  {{c1}} vs {{c2}}: r={{r:.3f}}")
+print("NOTE: use built-in csv module for analysis. pandas is NOT available in this sandbox.")
 '''
         result = subprocess.run(
             ["python", "-c", code],
-            capture_output=True,
-            text=True,
-            timeout=30,
+            capture_output=True, text=True, timeout=30,
             env={**os.environ, "PYTHONUNBUFFERED": "1"},
         )
         return result.stdout.strip() or f"(empty file or read error: {result.stderr})"
