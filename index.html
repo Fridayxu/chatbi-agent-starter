@@ -756,6 +756,7 @@ function App() {
     addMsg('user', display)
     addMsg('assistant', '')
     setLoading(true)
+    setStatusText('Thinking...')
 
     ctrlRef.current = new AbortController()
     try {
@@ -875,16 +876,24 @@ function App() {
       )
     ),
 
-    /* ── Status bar (thinking / executing) ── */
+    /* ── Status pill — animated, inside header area ── */
     statusText && h('div', {
       style: {
-        textAlign: 'center', padding: '6px 0', fontSize: '0.75rem',
-        color: 'var(--text-muted)', fontStyle: 'italic',
-        borderBottom: '1px solid var(--border)', flexShrink: 0,
-        background: 'var(--bg-raised)',
+        textAlign: 'center', padding: '4px 0 6px', flexShrink: 0,
+        background: 'var(--bg)',
       }
     },
-      h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+      h('span', {
+        style: {
+          display: 'inline-flex', alignItems: 'center', gap: '7px',
+          fontSize: '0.75rem', fontWeight: 500,
+          color: statusText === 'Executing...' ? 'var(--warning)' : 'var(--accent-strong)',
+          background: statusText === 'Executing...' ? 'rgba(212,168,92,0.1)' : 'var(--accent-dim)',
+          border: '1px solid ' + (statusText === 'Executing...' ? 'rgba(212,168,92,0.25)' : 'rgba(94,168,217,0.2)'),
+          padding: '5px 14px', borderRadius: 'var(--radius-full)',
+          animation: 'pulse-text 1.4s ease-in-out infinite',
+        }
+      },
         h('span', { className: 'running-dots' }, h('span'), h('span'), h('span')),
         statusText
       )

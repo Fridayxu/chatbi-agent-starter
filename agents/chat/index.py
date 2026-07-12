@@ -303,8 +303,11 @@ async def handler(ctx: Any) -> Any:
             {"role": "user", "content": display_msg},
         ]
 
+        # Only include tools when files are uploaded (avoids model overhead for simple chat)
+        has_files = len(uploaded) > 0
+
         async def gen():
-            nonlocal messages
+            nonlocal messages, has_files
             assistant_text = ""
             max_turns = 10
             turn = 0
@@ -318,14 +321,24 @@ async def handler(ctx: Any) -> Any:
                         yield ctx.utils.sse({"type": "status", "status": "aborted"})
                         break
 
-                    # ── Signal to frontend: LLM is thinking ──
+                    # ── Signal to frontend ──
                     yield ctx.utils.sse({"type": "status", "status": "thinking"})
 
                     t_api = time.time()
 
                     # ── Stream from API — real-time text + tool call accumulation ──
                     streamed_content = ""
-                    tool_call_accum: dict[int, dict] = {}  # index → {id, name, arguments}
+                    tool_call_accum: dict[int, dict] = {}
+
+                    # Build request body — conditionally include tools
+                    req_body = {
+                        "model": model,
+                        "messages": messages,
+                        "stream": True,
+                    }
+                    if has_files:
+                        req_body["tools"] = TOOLS
+                        req_body["tool_choice"] = "auto"
 
                     try:
                         async with client.stream(
@@ -335,13 +348,7 @@ async def handler(ctx: Any) -> Any:
                                 "Authorization": f"Bearer {api_key}",
                                 "Content-Type": "application/json",
                             },
-                            json={
-                                "model": model,
-                                "messages": messages,
-                                "tools": TOOLS,
-                                "tool_choice": "auto",
-                                "stream": True,
-                            },
+                            json=req_body,
                         ) as stream_response:
                             if stream_response.status_code != 200:
                                 err_body = (await stream_response.aread()).decode()[:300]
